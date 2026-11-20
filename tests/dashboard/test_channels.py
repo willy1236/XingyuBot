@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -134,3 +136,16 @@ def _info(login_method: str, discord_user_id: str | None) -> SessionInfo:
 )
 def test_forward_access(login_method, discord_user_id, expected):
     assert channels.forward_access(_info(login_method, discord_user_id)) == expected
+
+
+class TestBanned:
+    def test_停權的頻道_清單與詳情的_state_都是_banned(self, repo):
+        repo.add(
+            TwitchBotJoinChannel(
+                twitch_id=int(CHANNEL_ID), state="disabled", banned_at=datetime(2026, 1, 1, tzinfo=UTC)
+            )
+        )
+        sid = make_twitch_session(repo, twitch_id=CHANNEL_ID)
+
+        assert client_for(sid).get("/dashboard/channels").json()["channels"][0]["state"] == "banned"
+        assert client_for(sid).get(f"/dashboard/channels/{CHANNEL_ID}").json()["state"] == "banned"

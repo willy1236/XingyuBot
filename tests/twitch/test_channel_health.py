@@ -44,7 +44,7 @@ def status(joined=True, ok=(), failed=(), pending=False) -> ChannelStatus:
 class FakeTwitch:
     """依路徑回應的 Twitch：預設一切正常（授權有效、bot 是 mod、沒被 ban 或封鎖、bot 在聊天室）。"""
 
-    def __init__(self, monkeypatch, row_state="enabled"):
+    def __init__(self, monkeypatch, row_state="enabled", banned_at=None):
         self.requests: list[httpx.Request] = []
         self.scopes = list(channel_activation.ENABLE_SCOPES)
         self.validate = lambda: httpx.Response(200, json={"scopes": self.scopes})
@@ -85,7 +85,11 @@ class FakeTwitch:
 
         monkeypatch.setattr(health, "run_db", run_db)
         monkeypatch.setattr(health, "bot_user_id_blocking", lambda: BOT_ID)
-        monkeypatch.setattr(health, "sqldb", SimpleNamespace(get=lambda model, key: SimpleNamespace(state=row_state)))
+        monkeypatch.setattr(
+            health,
+            "sqldb",
+            SimpleNamespace(get=lambda model, key: SimpleNamespace(state=row_state, banned_at=banned_at)),
+        )
         monkeypatch.setattr(twitch_speech_check, "broadcaster_client_id_blocking", lambda: "client-1")
         monkeypatch.setattr(twitch_control, "broadcaster_token", broadcaster_token)
         monkeypatch.setattr(twitch_control, "channel_status", channel_status)
@@ -111,6 +115,13 @@ def test_功能對照表的事件名稱與_bot_的訂閱一致():
 def test_未啟用與已停用不打任何_Twitch_或_bot(monkeypatch, row_state):
     fake = FakeTwitch(monkeypatch, row_state)
     assert run(health.channel_health(TWITCH_ID)) == ChannelHealth(row_state)
+    assert fake.requests == []
+
+
+@pytest.mark.parametrize("row_state", ["inactive", "enabled", "disabled"])
+def test_已停權不打任何_Twitch_或_bot_也不看_state(monkeypatch, row_state):
+    fake = FakeTwitch(monkeypatch, row_state, banned_at=object())
+    assert run(health.channel_health(TWITCH_ID)) == ChannelHealth("banned")
     assert fake.requests == []
 
 

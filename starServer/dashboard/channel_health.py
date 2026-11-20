@@ -1,6 +1,6 @@
 """頻道的健康狀態：哪些功能因 Twitch 端的權限問題暫停，載入頻道頁時即時判定，不存 DB。
 
-只有 DB 的 state 是 enabled 的頻道才會判定；未啟用與已停用不打任何 Twitch API 或 RPC。
+只有 DB 的 state 是 enabled 的頻道才會判定；未啟用、已停用與已停權（`banned_at` 不為 null）不打任何 Twitch API 或 RPC。
 W-12 的營運入口也用 `channel_health` 判斷頻道狀態。
 
 判定來源：
@@ -29,7 +29,7 @@ from .db import run_db
 
 log = logging.getLogger(__name__)
 
-type HealthState = Literal["inactive", "enabled", "partial", "disabled"]
+type HealthState = Literal["inactive", "enabled", "partial", "disabled", "banned"]
 type Issue = Literal["token_invalid", "not_mod", "bot_banned", "not_joined", "subscription_failed", "bot_offline"]
 
 #: issues 依這個順序輸出
@@ -273,9 +273,12 @@ def _judge(access: _Access, status: twitch_control.ChannelStatus | twitch_contro
 async def channel_health(twitch_id: int) -> ChannelHealth:
     """頻道目前的狀態、問題與暫停的功能。不 raise Twitch 或 bot 的錯誤，查不到的項目略過。
 
-    state 是 inactive、enabled、partial（有功能暫停）、disabled；只有 bot 離線時仍是 enabled，不暫停任何功能。
+    state 是 inactive、enabled、partial（有功能暫停）、disabled、banned（停權優先於 DB 的 state）；
+    只有 bot 離線時仍是 enabled，不暫停任何功能。
     """
     row = await run_db(lambda: sqldb.get(TwitchBotJoinChannel, (twitch_id,)))
+    if row is not None and row.banned_at is not None:
+        return ChannelHealth("banned")
     state = "inactive" if row is None else row.state
     if state != "enabled":
         return ChannelHealth(cast(HealthState, state))
