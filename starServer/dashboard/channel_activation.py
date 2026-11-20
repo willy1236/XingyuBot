@@ -20,7 +20,7 @@ from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.providers.social.models import TwitchUser
-from starlib.twitch_tokens import MODERATORS_URL, bot_user_id_blocking
+from starlib.twitch_tokens import ENABLE_SCOPES, MODERATORS_URL, bot_user_id_blocking
 
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
@@ -47,17 +47,6 @@ log = logging.getLogger(__name__)
 
 to_router = APIRouter()
 router = APIRouter(prefix="/dashboard")
-
-#: 實況主授權給 bot 的權限；twitch_chatbot.USER_SCOPE 是 bot 帳號自己的，不要混用
-ENABLE_SCOPES = [
-    "channel:manage:moderators",
-    "moderation:read",
-    "moderator:read:followers",
-    "channel:read:subscriptions",
-    "channel:read:redemptions",
-    "channel:read:predictions",
-    "user:read:blocked_users",
-]
 
 REQUEST_TIMEOUT = 5.0
 

@@ -27,7 +27,7 @@
 |---|---|---|---|---|---|---|
 | 1 | O-01 | 未完成 | bot owner 能在網頁上用 ID 查使用者、頻道、伺服器、身分組與訊息 | 無 | A | 骨架切片，取代 `/find` |
 | 2 | O-03 | 未完成 | bot owner 能在系統分頁看到 Discord bot、Twitch bot、匯流排與 DB 的運行狀態 | 無 | A | 新增「系統」分頁 |
-| 3 | O-05 | 未完成 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
+| 3 | O-05 | 進行中 | bot owner 能跨頁統計並篩出 token 有問題的 Twitch 頻道 | 無 | A | 做不做見待決 3 |
 | 4 | O-02 | 未完成 | bot owner 能查任兩個伺服器的共通成員 | O-01 | B | 取代 `/findmember` |
 | 5 | O-04 | 未完成 | bot owner 能看到每個排程任務的下次執行時間與最近一次結果 | O-03 | B | |
 
@@ -208,7 +208,9 @@
 - 全部撈出再篩選的做法在已啟用頻道數千筆以下沒問題；超過時再改成 SQL 篩選。
 - access token 過期是正常狀態（用到才續期），不能當成問題。
 
-**進度**：未完成
+**進度**：進行中
+- 已完成：`ENABLE_SCOPES` 搬到 `starlib/twitch_tokens.py`
+- 續做：`OAuthToken.refresh_failed_at` 與 `_refresh_locked` 標記（`starlib/database/postgresql/models.py`、`starlib/twitch_tokens.py`、`starlib/oauth/oauth_lib.py`）
 
 ## 開工前待決
 

@@ -22,7 +22,7 @@ import httpx
 from starlib import sqldb, twitch_speech_check
 from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
-from starlib.twitch_tokens import MODERATORS_URL, TokenInvalid, bot_user_id_blocking
+from starlib.twitch_tokens import ENABLE_SCOPES, MODERATORS_URL, TokenInvalid, bot_user_id_blocking
 
 from . import twitch_control
 from .db import run_db
@@ -153,8 +153,6 @@ async def _get(client: httpx.AsyncClient, url: str, headers: dict[str, str], **p
 
 async def _token_rejected(client: httpx.AsyncClient, token: str) -> bool:
     """validate 端點回 401 或缺少必要的 scope 就是授權失效；查不到不算。"""
-    from .channel_activation import ENABLE_SCOPES  # 延遲 import：channel_activation 會 import channels，頂層會循環
-
     try:
         response = await client.get(VALIDATE_URL, headers={"Authorization": f"OAuth {token}"})
     except httpx.HTTPError as exc:

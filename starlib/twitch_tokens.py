@@ -26,6 +26,17 @@ MODERATORS_URL = "https://api.twitch.tv/helix/moderation/moderators"
 REFRESH_MARGIN = timedelta(minutes=10)
 REQUEST_TIMEOUT = 5.0
 
+#: 實況主授權給 bot 的權限；twitch_chatbot.USER_SCOPE 是 bot 帳號自己的，不要混用
+ENABLE_SCOPES = [
+    "channel:manage:moderators",
+    "moderation:read",
+    "moderator:read:followers",
+    "channel:read:subscriptions",
+    "channel:read:redemptions",
+    "channel:read:predictions",
+    "user:read:blocked_users",
+]
+
 
 @dataclass(frozen=True, slots=True)
 class TokenInvalid:
