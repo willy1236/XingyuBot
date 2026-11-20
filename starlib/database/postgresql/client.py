@@ -13,7 +13,7 @@ from uuid import UUID
 
 import discord
 from google.oauth2.credentials import Credentials
-from sqlalchemy import Engine, and_, desc, event, exists, func, not_, or_, text
+from sqlalchemy import Engine, String, and_, cast, desc, event, exists, func, not_, or_, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -2303,6 +2303,27 @@ class TwitchRepository(BaseRepository):
             .execution_options(populate_existing=True)
         )
         return list(self.session.exec(stmt).all()), total
+
+    def list_enabled_channel_tokens(self) -> list[tuple[TwitchBotJoinChannel, OAuthToken | None]]:
+        """營運入口的 token 統計：所有已啟用且沒停權的頻道與其實況主 token（沒有就是 None），排序同 `list_twitch_join_channels`。"""
+        # 延遲 import：twitch_tokens 會 import sqldb，頂層會循環
+        from starlib.twitch_tokens import BROADCASTER_CLIENT_SEQ
+
+        credential_id = self.get_oauth_client(APIType.Twitch, BROADCASTER_CLIENT_SEQ).credential_id
+        stmt = (
+            select(TwitchBotJoinChannel, OAuthToken)
+            .outerjoin(
+                OAuthToken,
+                and_(
+                    OAuthToken.client_credential_id == credential_id,  # pyright: ignore[reportArgumentType]
+                    OAuthToken.user_id == cast(TwitchBotJoinChannel.twitch_id, String),  # pyright: ignore[reportArgumentType]
+                ),
+            )
+            .where(TwitchBotJoinChannel.state == "enabled", col(TwitchBotJoinChannel.banned_at).is_(None))
+            .order_by(desc(TwitchBotJoinChannel.first_seen_at).nulls_last(), TwitchBotJoinChannel.twitch_id)  # pyright: ignore[reportArgumentType]
+            .execution_options(populate_existing=True)
+        )
+        return [(channel, token) for channel, token in self.session.exec(stmt).all()]
 
     def list_chat_command_by_channel(self, channel_id: int):
         stmt = select(TwitchChatCommand).where(TwitchChatCommand.twitch_id == channel_id)

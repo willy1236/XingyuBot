@@ -46,6 +46,29 @@ class TokenInvalid:
     reason: Literal["missing", "revoked", "unavailable"]
 
 
+TokenState = Literal["ok", "missing", "scope_missing", "revoked"]
+
+
+def missing_scopes(token: OAuthToken | None) -> list[str]:
+    """token 缺少的 `ENABLE_SCOPES`，依 `ENABLE_SCOPES` 的順序；沒有 token 時是全部。"""
+    granted = set(token.scope or ()) if token is not None else set()
+    return [scope for scope in ENABLE_SCOPES if scope not in granted]
+
+
+def token_state(token: OAuthToken | None) -> TokenState:
+    """只看 DB 判定實況主 token 的狀態，不對 Twitch 發請求；access token 過期是正常狀態（用到才續期），不算問題。
+
+    沒有 token 或 `refresh_token` 為空是 missing，續期曾被拒（`refresh_failed_at`）是 revoked，scope 不足是 scope_missing。
+    """
+    if token is None or not token.refresh_token:
+        return "missing"
+    if token.refresh_failed_at is not None:
+        return "revoked"
+    if missing_scopes(token):
+        return "scope_missing"
+    return "ok"
+
+
 async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
     """回傳實況主可用的 access token；快過期（10 分鐘內）時先用 refresh token 換新並寫回 DB。不 raise。
 

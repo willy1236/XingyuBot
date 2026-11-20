@@ -221,3 +221,38 @@ class TestBotUserId:
         with pytest.raises(RuntimeError):
             twitch_tokens.bot_user_id_blocking()
         assert twitch_tokens.bot_user_id_blocking() == "42"
+
+
+class TestTokenState:
+    @staticmethod
+    def token(**kwargs) -> OAuthToken:
+        fields = {
+            "user_id": "1",
+            "client_credential_id": 1,
+            "access_token": "a",
+            "refresh_token": "r",
+            "scope": list(twitch_tokens.ENABLE_SCOPES),
+            "expires_at": datetime.now(UTC) - timedelta(hours=1),
+        }
+        return OAuthToken(**{**fields, **kwargs})
+
+    def test_expired_access_token_is_ok(self):
+        assert twitch_tokens.token_state(self.token()) == "ok"
+
+    @pytest.mark.parametrize("refresh", [None, ""])
+    def test_no_token_or_refresh_token_is_missing(self, refresh):
+        assert twitch_tokens.token_state(None) == "missing"
+        assert twitch_tokens.token_state(self.token(refresh_token=refresh)) == "missing"
+
+    def test_refresh_failed_is_revoked_even_with_missing_scopes(self):
+        token = self.token(refresh_failed_at=datetime.now(UTC), scope=[])
+        assert twitch_tokens.token_state(token) == "revoked"
+
+    def test_missing_scopes_keep_enable_scopes_order(self):
+        token = self.token(scope=["moderation:read", "user:read:blocked_users", "extra"])
+
+        assert twitch_tokens.token_state(token) == "scope_missing"
+        assert twitch_tokens.missing_scopes(token) == [
+            s for s in twitch_tokens.ENABLE_SCOPES if s not in ("moderation:read", "user:read:blocked_users")
+        ]
+        assert twitch_tokens.missing_scopes(None) == twitch_tokens.ENABLE_SCOPES

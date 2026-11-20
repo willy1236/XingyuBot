@@ -10,11 +10,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from starlib import sclient, twitch_audit
-from starlib.database import TwitchBotJoinChannel
+from starlib.database import APIType, OAuthToken, TwitchBotJoinChannel
 from starlib.identity.client import LinkedPassport, ResolvedAccount
 from starlib.messaging import cache_invalidation
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.twitch_audit import AuditActor, list_changes
+from starlib.twitch_tokens import BROADCASTER_CLIENT_SEQ, ENABLE_SCOPES
 from starServer.dashboard import channel_activation, channels, ops, twitch_control
 from starServer.dashboard.channel_health import ChannelHealth
 from tests.helpers.dashboard_auth import (
@@ -201,6 +202,82 @@ class TestList:
     def test_channel_after_delete_data_is_still_listed(self, owner, repo):
         add_channel(repo, state="inactive", login="host")
         assert [c["id"] for c in owner.get(BASE).json()["channels"]] == [str(CHANNEL_ID)]
+
+
+def add_token(repo, twitch_id, *, scope=ENABLE_SCOPES, refresh="refresh", refresh_failed_at=None, expired=False):
+    credential_id = repo.get_oauth_client(APIType.Twitch, BROADCASTER_CLIENT_SEQ).credential_id
+    repo.merge(
+        OAuthToken(
+            user_id=str(twitch_id),
+            client_credential_id=credential_id,
+            access_token="access",
+            refresh_token=refresh,
+            scope=list(scope),
+            expires_at=NOW if expired else datetime.now(UTC) + timedelta(hours=1),
+            refresh_failed_at=refresh_failed_at,
+        )
+    )
+
+
+class TestTokenStats:
+    @pytest.fixture
+    def channels(self, repo):
+        """1 正常（access token 過期也算正常）、2 沒有 token、3 refresh token 為空、4 缺 scope、5 續期被拒，
+        6 停權、7 已停用：後兩者有問題也不算。"""
+        for i, state in enumerate(["enabled"] * 5 + ["disabled", "disabled"], start=1):
+            add_channel(repo, i, state, banned_at=NOW if i == 6 else None, first_seen_at=NOW + timedelta(days=10 - i))
+        add_token(repo, 1, expired=True)
+        add_token(repo, 3, refresh="")
+        add_token(repo, 4, scope=[s for s in ENABLE_SCOPES if s not in ("moderation:read", "channel:read:predictions")])
+        add_token(repo, 5, refresh_failed_at=NOW)
+        add_token(repo, 7, scope=[])
+
+    def test_counts_problems_of_enabled_channels_only(self, owner, channels):
+        body = owner.get(BASE).json()
+
+        assert body["token_problems"] == {"missing": 2, "scope_missing": 1, "revoked": 1}
+        assert body["total"] == 7
+
+    def test_enabled_rows_carry_token_state_and_others_do_not(self, owner, channels):
+        rows = {c["id"]: c for c in owner.get(BASE).json()["channels"]}
+
+        assert rows["1"]["token"] == {"state": "ok", "missing_scopes": []}
+        assert rows["2"]["token"]["state"] == "missing"
+        assert rows["3"]["token"]["state"] == "missing"
+        assert rows["4"]["token"] == {
+            "state": "scope_missing",
+            "missing_scopes": ["moderation:read", "channel:read:predictions"],
+        }
+        assert rows["5"]["token"]["state"] == "revoked"
+        assert "token" not in rows["6"] and "token" not in rows["7"]
+
+    def test_filter_lists_only_problem_channels_in_list_order(self, owner, channels):
+        body = owner.get(BASE, params={"token_problem": 1}).json()
+
+        assert [c["id"] for c in body["channels"]] == ["2", "3", "4", "5"]
+        assert body["total"] == 4
+        assert body["token_problems"] == {"missing": 2, "scope_missing": 1, "revoked": 1}
+
+    def test_filter_paginates_by_50(self, owner, repo):
+        for i in range(55):
+            add_channel(repo, 100 + i, first_seen_at=NOW + timedelta(minutes=i))
+        add_token(repo, 154)
+
+        first = owner.get(BASE, params={"token_problem": 1}).json()
+        second = owner.get(BASE, params={"token_problem": 1, "page": 2}).json()
+
+        assert (len(first["channels"]), len(second["channels"]), first["total"]) == (50, 4, 54)
+        assert first["channels"][0]["id"] == "153" and second["channels"][-1]["id"] == "100"
+
+    def test_does_not_call_twitch(self, owner, channels, spy, monkeypatch):
+        from starlib import twitch_tokens
+
+        def fail(*args, **kwargs):
+            raise AssertionError("統計不該對 Twitch 發請求")
+
+        monkeypatch.setattr(twitch_tokens.httpx, "post", fail)
+        assert owner.get(BASE, params={"token_problem": 1}).status_code == 200
+        assert spy.health_calls == []
 
 
 class TestHealth:
