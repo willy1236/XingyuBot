@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from starDiscord.cmds import task as voice_task
 from starlib import sclient
 from starlib.database import GuildSetting, VoiceTime
-from starServer.dashboard import settings
+from starServer.dashboard import settings, voice_ranking
 from tests.helpers.dashboard_auth import FRONTEND, make_app, make_session
 from tests.helpers.dashboard_guilds import MANAGE_CHANNELS, MANAGE_GUILD, g
 from tests.helpers.dashboard_notifies import GUILD_ID, fake_bot
@@ -40,6 +40,7 @@ def client(discord_env, repo, dashboard_env, monkeypatch) -> TestClient:
     make_session(repo)
     discord_env.guilds = [g(str(GUILD_ID), "guild", MANAGE_GUILD)]
     monkeypatch.setattr(settings, "sqldb", repo)
+    monkeypatch.setattr(voice_ranking, "sqldb", repo)
     monkeypatch.setattr(sclient, "bot", fake_bot(FakeGuild()))
     monkeypatch.setattr(voice_task, "voice_times", {})
     repo.cache.voice_time_counter.load([])

@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from starDiscord.cmds import task as voice_task
 from starlib import sclient
 from starlib.database import (
     Bet,
@@ -25,7 +26,7 @@ from starlib.database import (
     WarningType,
 )
 from starlib.utils import nowtz
-from starServer.dashboard import personal, personal_records
+from starServer.dashboard import personal, personal_records, voice_ranking
 from tests.helpers.accounts import OTHER_ID, account
 from tests.helpers.dashboard_auth import USER_ID, make_app, make_session
 
@@ -37,6 +38,16 @@ HERE, GONE = 7001, 7002
 NOW = nowtz().replace(microsecond=0)
 
 
+class FakeGuild:
+    id = HERE
+    name = "快樂營"
+    #: 目前在伺服器裡的成員
+    members: set[int] = {OWN}
+
+    def get_member(self, uid: int):
+        return SimpleNamespace() if uid in self.members else None
+
+
 class FakeBot:
     def __init__(self, ready: bool = True):
         self.ready = ready
@@ -46,7 +57,7 @@ class FakeBot:
         return self.ready
 
     def get_guild(self, gid: int):
-        return SimpleNamespace(name="快樂營") if gid == HERE else None
+        return FakeGuild() if gid == HERE else None
 
     def submit(self, coro):
         return self._pool.submit(asyncio.run, coro)
@@ -55,6 +66,9 @@ class FakeBot:
 @pytest.fixture
 def client(repo, dashboard_env, monkeypatch) -> TestClient:
     monkeypatch.setattr(personal_records, "sqldb", repo)
+    monkeypatch.setattr(voice_ranking, "sqldb", repo)
+    monkeypatch.setattr(voice_task, "voice_times", {})
+    monkeypatch.setattr(FakeGuild, "members", {OWN})
     monkeypatch.setattr(sclient, "bot", FakeBot())
 
     async def no_identity(discord_id, *, create=True):
@@ -90,7 +104,7 @@ class TestScope:
 
 
 class TestVoice:
-    def test_sorted_desc_with_unknown_guild(self, client, repo):
+    def seed(self, repo):
         repo.session.add_all(
             [
                 VoiceTime(discord_id=OWN, guild_id=GONE, total_minute=timedelta(minutes=5)),
@@ -99,9 +113,50 @@ class TestVoice:
             ]
         )
         repo.session.commit()
+
+    def test_sorted_desc_with_rank_and_unknown_guild(self, client, repo):
+        self.seed(repo)
         assert get(client, "voice").json() == {
-            "items": [{"guild_name": "快樂營", "minutes": 127}, {"guild_name": None, "minutes": 5}]
+            "items": [
+                {
+                    "guild_id": str(HERE),
+                    "guild_name": "快樂營",
+                    "minutes": 127,
+                    "rank": 2,
+                    "ranked": 2,
+                    "ranking_visible": True,
+                },
+                {
+                    "guild_id": str(GONE),
+                    "guild_name": None,
+                    "minutes": 5,
+                    "rank": None,
+                    "ranked": None,
+                    "ranking_visible": False,
+                },
+            ]
         }
+
+    def test_unsaved_minutes_change_minutes_and_rank(self, client, repo):
+        self.seed(repo)
+        voice_task.voice_times[HERE] = {OWN: timedelta(hours=100)}
+        item = get(client, "voice").json()["items"][0]
+        assert (item["minutes"], item["rank"]) == (6127, 1)
+
+    def test_unsaved_only_guild_listed(self, client):
+        voice_task.voice_times[HERE] = {OWN: timedelta(minutes=3)}
+        items = get(client, "voice").json()["items"]
+        assert [(i["guild_id"], i["minutes"], i["rank"], i["ranked"]) for i in items] == [(str(HERE), 3, 1, 1)]
+
+    def test_ranking_hidden_after_leaving_guild(self, client, repo, monkeypatch):
+        self.seed(repo)
+        monkeypatch.setattr(FakeGuild, "members", set())
+        item = get(client, "voice").json()["items"][0]
+        assert (item["rank"], item["ranking_visible"]) == (2, False)
+
+    def test_unsaved_only_guild_skipped_after_bot_left(self, client):
+        voice_task.voice_times[GONE] = {OWN: timedelta(minutes=3)}
+        assert get(client, "voice").json() == {"items": []}
 
     def test_empty(self, client):
         assert get(client, "voice").json() == {"items": []}

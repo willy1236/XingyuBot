@@ -1,6 +1,6 @@
 """個人區的紀錄：語音時數、警告、投票、賭盤與抽獎（T-06）。
 
-GET /dashboard/personal/records/voice?discord_id=                          各伺服器的語音分鐘數，由多到少
+GET /dashboard/personal/records/voice?discord_id=                          各伺服器的語音分鐘數與名次，由多到少
 GET /dashboard/personal/records/{warnings|polls|bets|giveaways}?discord_id=&offset=&limit=   由新到舊，回 {items, total}
 
 `discord_id` 必須在個人區可見範圍內。紀錄以資料庫為準，Discord 只用來補伺服器名稱，bot 已離開的伺服器名稱為 null。
@@ -8,17 +8,19 @@ GET /dashboard/personal/records/{warnings|polls|bets|giveaways}?discord_id=&offs
 
 import asyncio
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 
+from starDiscord.cmds import task as voice_task
 from starlib import sclient, sqldb
 from starlib.database import WarningType
 
 from .db import run_db
 from .errors import DashboardError
 from .personal import PersonalScope, require_personal
+from .voice_ranking import is_member, minutes, ranking
 
 router = APIRouter(prefix="/dashboard")
 
@@ -62,14 +64,53 @@ def _iso(value: datetime | None) -> str | None:
 
 
 # ====== voice ======
+def _voice_items(discord_id: int, saved: list[tuple[int, timedelta]], scope: PersonalScope) -> list[dict]:
+    """各伺服器的時數與名次，在 bot 的事件迴圈上呼叫（見 voice_ranking）。
+
+    bot 還在的伺服器：時數含尚未存檔的分鐘，附名次與排行人數，ranking_visible 表示可以開排行頁。
+    bot 已離開的伺服器：只有資料庫的時數，名稱、名次與人數為 null。
+    """
+    bot = sclient.bot
+    saved_totals = dict(saved)
+    guild_ids = set(saved_totals) | {gid for gid, users in voice_task.voice_times.items() if discord_id in users}
+    items = []
+    for gid in guild_ids:
+        guild = bot.get_guild(gid)
+        item = {"guild_id": str(gid), "guild_name": None, "rank": None, "ranked": None, "ranking_visible": False}
+        if guild is None:
+            if gid not in saved_totals:
+                # bot 剛離開、只有尚未存檔分鐘的伺服器：沒有可顯示的資料庫時數
+                continue
+            item["minutes"] = minutes(saved_totals[gid])
+        else:
+            ranked = ranking(gid)
+            rank, total = next((i, t) for i, (uid, t) in enumerate(ranked) if uid == discord_id)
+            item |= {
+                "guild_name": guild.name,
+                "minutes": minutes(total),
+                "rank": rank + 1,
+                "ranked": len(ranked),
+                "ranking_visible": is_member(guild, scope.discord_ids),
+            }
+        items.append(item)
+    return sorted(items, key=lambda i: (-i["minutes"], int(i["guild_id"])))
+
+
 @router.get("/personal/records/voice")
 async def voice_records(discord_id: int, scope: PersonalScope = Depends(require_personal())):
     _check_scope(discord_id, scope)
-    rows = await run_db(
-        lambda: [(v.guild_id, int(v.total_minute.total_seconds() // 60)) for v in sqldb.list_voice_times(discord_id)]
-    )
-    names = await _guild_names({gid for gid, _ in rows})
-    return {"items": [{"guild_name": names[gid], "minutes": minutes} for gid, minutes in rows]}
+    saved = await run_db(lambda: [(v.guild_id, v.total_minute) for v in sqldb.list_voice_times(discord_id)])
+    bot = sclient.bot
+    if bot is None or not bot.is_ready():
+        # bot 沒在跑時也沒有尚未存檔的分鐘，沒有紀錄就不需要 bot
+        if not saved:
+            return {"items": []}
+        raise DashboardError(503, "bot_unavailable")
+
+    async def _read() -> list[dict]:
+        return _voice_items(discord_id, saved, scope)
+
+    return {"items": await asyncio.wrap_future(bot.submit(_read()))}
 
 
 # ====== 分頁類 ======
