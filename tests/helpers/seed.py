@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
 from starlib.database import (
@@ -94,3 +96,27 @@ def _import_instance_offline() -> None:
 
     with patch.object(TwitchAPI, "_TwitchAPI__get_headers", lambda self: {"Client-Id": "test-twitch-1-id"}):
         import starlib.instance  # noqa: F401
+
+
+#: 選到 integration 測試時，從原 DB 唯讀複製的表（依外鍵順序），取代上面的假憑證。
+#: 只複製 app 層級的憑證：credentials.credential／id_secret／access_token／oauth_client／websub_config；
+#: oauth_token（各使用者的授權）與 websub_instance（執行期的訂閱狀態）不複製。
+#: 限制：import 時就建好的 client（starlib.instance、bot_website 的模組變數）仍拿著假憑證，
+#: 只有執行期才讀 DB 的地方（如 test_community 建立的 CLIInterface）會拿到真實憑證。
+_REAL_CREDENTIAL_TABLES = [Credential, IdentifierSecret, AccessToken, OAuthClient, WebSubConfig]
+
+
+def use_real_credentials(repo: SQLRepository, source: Engine) -> None:
+    """把假憑證換成原 DB 的真實憑證；`source` 必須是唯讀連線，對原 DB 只做 SELECT。"""
+    tables = [model.__table__ for model in _REAL_CREDENTIAL_TABLES]
+    try:
+        with source.connect() as src:
+            rows = {table: [dict(row) for row in src.execute(table.select()).mappings()] for table in tables}
+    finally:
+        source.dispose()
+    names = ", ".join(f'"{table.schema}"."{table.name}"' for table in tables)
+    with repo.engine.begin() as dst:
+        dst.execute(text(f"TRUNCATE {names} CASCADE"))
+        for table in tables:
+            if rows[table]:
+                dst.execute(table.insert(), rows[table])

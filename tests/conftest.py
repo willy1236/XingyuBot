@@ -16,6 +16,12 @@ from tests.helpers.dashboard_guilds import discord as discord_env  # noqa: E402,
 from tests.helpers.identity import repo  # noqa: E402, F401  (fixture)
 
 
+def pytest_collection_finish(session):
+    # session.items 已套用 -m／-k 篩選；選到 integration 測試時才改用原 DB 的真實憑證
+    if any(item.get_closest_marker("integration") for item in session.items):
+        seed.use_real_credentials(sqldb, temp_db.source_readonly())
+
+
 def pytest_unconfigure(config):
     temp_db.drop(sqldb.engine)
 

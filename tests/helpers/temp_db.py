@@ -22,6 +22,7 @@ _LOCK_KEY = 0x5354_4442_5445_5354 & 0x7FFF_FFFF_FFFF_FFFF
 _admin: Engine | None = None
 _keeper: Connection | None = None
 _name: str | None = None
+_source: URL | None = None
 
 
 def _load_settings():
@@ -68,7 +69,7 @@ def _drop_stale(conn: Connection, prefix: str) -> None:
 
 def redirect() -> str:
     """建立暫時資料庫並把 DB_NAME 指過去，回傳名稱；同一個 process 只建一次。"""
-    global _admin, _keeper, _name
+    global _admin, _keeper, _name, _source
     if _name is not None:
         return _name
 
@@ -85,7 +86,8 @@ def redirect() -> str:
         port=settings.DB_PORT,
         database=settings.DB_NAME,
     )
-    # 建立、清理與鎖都在 maintenance DB `postgres` 上做，測試完全不連原 DB
+    _source = url
+    # 建立、清理與鎖都在 maintenance DB `postgres` 上做；原 DB 只在 source_readonly() 唯讀讀取
     _admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT", poolclass=NullPool)
     with _admin.connect() as conn:
         # 建立到 keeper 連上之間，別的 process 的清理看不到連線；用 advisory lock 讓清理與建立互斥
@@ -103,6 +105,13 @@ def redirect() -> str:
     # conftest 載入失敗時 pytest_unconfigure 不會執行，靠 atexit 兜底
     atexit.register(drop)
     return name
+
+
+def source_readonly() -> Engine:
+    """原 DB（如 stardb）的唯讀 engine：連線層設 default_transaction_read_only，任何寫入或 DDL 都會被 Postgres 拒絕。"""
+    if _source is None:
+        raise RuntimeError("redirect() 還沒呼叫")
+    return create_engine(_source, poolclass=NullPool, connect_args={"options": "-c default_transaction_read_only=on"})
 
 
 def drop(*engines: Engine) -> None:
