@@ -68,6 +68,8 @@ def _run_scenario(scenario, ctx: Ctx) -> Result:
         return Result(scenario.name, True, time.monotonic() - started)
     except Failure as e:
         message = str(e)
+    except (KeyError, IndexError, TypeError) as e:
+        message = f"回應內容與預期的結構不符（{type(e).__name__}: {e}），最後一次請求：{ctx.last_request or '無'}"
     except AssertionError as e:
         # playwright 的 expect 以 AssertionError 回報，訊息含定位器與預期；只留前幾行，不印整頁 snapshot
         message = "畫面上的元素與預期不符：" + " / ".join(line.strip() for line in str(e).strip().splitlines()[:3])
@@ -84,6 +86,14 @@ def _run_scenario(scenario, ctx: Ctx) -> Result:
 
 def run(args: Args) -> int:
     from tests.helpers import temp_db
+
+    try:
+        from e2e.services import preflight
+
+        checked = preflight(args)
+    except StartupError as e:
+        print(f"\nE2E 無法啟動：{e}", file=sys.stderr)
+        return 2
 
     _prepare_env(args)
     temp_db.redirect()
@@ -121,10 +131,10 @@ def run(args: Args) -> int:
         session_id = data.seed(sqldb)
 
         print(f"E2E：暫時資料庫 {sqldb.engine.url.database}")
-        api = ApiServer(bot_website.app, args.api_port)
+        api = ApiServer(bot_website.app, args.api_port, checked.cert, checked.key)
         services.append(api)
         api.start()
-        frontend = Frontend(args.api_url, args.frontend_port)
+        frontend = Frontend(args.api_url, args.frontend_port, checked.frontend)
         services.append(frontend)
         print(f"E2E：Web API {args.api_url} 已啟動，啟動 domalyze_frontend（首次編譯較慢）…")
         t0 = time.monotonic()

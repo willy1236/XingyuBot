@@ -13,12 +13,13 @@ import subprocess
 import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
 import psutil
 
-from e2e.args import TIMEOUT_API_START, TIMEOUT_FRONTEND_START, StartupError
+from e2e.args import TIMEOUT_API_START, TIMEOUT_FRONTEND_START, Args, StartupError
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_ENV = "XINGYU_E2E_FRONTEND"
@@ -75,16 +76,43 @@ def _check_port(service: str, port: int, flag: str) -> None:
         raise StartupError(service, f"port {port} 已被佔用。關掉佔用的程式，或改用 {flag} 指定其他 port。")
 
 
-def _running_dev_server(frontend: Path) -> int | None:
-    """frontend 已有 `next dev` 在跑時回傳它的 pid：Next.js 同一個專案不能同時跑兩個。"""
+def _running_dev_server(frontend: Path) -> str | None:
+    """frontend 已有 `next dev` 在跑時回傳描述它的字串：Next.js 同一個專案不能同時跑兩個。
+
+    dev server 啟動時建立並鎖住 `.next/dev/lock`；Windows 上鎖住的檔案讀不了，讀得到時內容有 pid。
+    """
     lock = frontend / ".next" / "dev" / "lock"
     if not lock.is_file():
         return None
     try:
         pid = int(json.loads(lock.read_text(encoding="utf-8")).get("pid"))
-    except OSError, ValueError, TypeError:
+    except OSError:
+        return "pid 不明"
+    except ValueError, TypeError:
         return None
-    return pid if psutil.pid_exists(pid) else None
+    return f"pid {pid}" if psutil.pid_exists(pid) else None
+
+
+@dataclass(frozen=True)
+class Preflight:
+    frontend: Path
+    cert: Path
+    key: Path
+
+
+def preflight(args: Args) -> Preflight:
+    """啟動任何東西之前的檢查：憑證、frontend 目錄、port、frontend 是否已有 dev server。"""
+    cert, key = cert_files()
+    frontend = frontend_dir()
+    _check_port("api", args.api_port, "--api-port")
+    _check_port("frontend", args.frontend_port, "--frontend-port")
+    if (running := _running_dev_server(frontend)) is not None:
+        raise StartupError(
+            "frontend",
+            f"domalyze_frontend 已有 dev server 在跑（{running}）；Next.js 同一個專案不能同時跑兩個。"
+            "請自行結束它（taskkill /PID <pid> /F）再重跑，E2E 不會替你關。",
+        )
+    return Preflight(frontend, cert, key)
 
 
 def _ignore_reset(loop, context: dict) -> None:
@@ -97,22 +125,20 @@ def _ignore_reset(loop, context: dict) -> None:
 class ApiServer:
     """同行程內的 uvicorn：app 與假依賴都在這個行程，覆蓋資料才收得到。"""
 
-    def __init__(self, app, port: int):
-        self.app, self.port = app, port
+    def __init__(self, app, port: int, cert: Path, key: Path):
+        self.app, self.port, self.cert, self.key = app, port, cert, key
         self.server = None
         self.thread: threading.Thread | None = None
 
     def start(self) -> None:
         import uvicorn
 
-        _check_port("api", self.port, "--api-port")
-        cert, key = cert_files()
         config = uvicorn.Config(
             self.app,
             host="127.0.0.1",
             port=self.port,
-            ssl_certfile=str(cert),
-            ssl_keyfile=str(key),
+            ssl_certfile=str(self.cert),
+            ssl_keyfile=str(self.key),
             log_level="warning",
         )
         self.server = uvicorn.Server(config)
@@ -145,21 +171,14 @@ class ApiServer:
 class Frontend:
     """domalyze_frontend 的 `next dev --experimental-https`，輸出寫到暫存檔，失敗時附上尾端。"""
 
-    def __init__(self, api_url: str, port: int):
-        self.api_url, self.port = api_url, port
+    def __init__(self, api_url: str, port: int, directory: Path):
+        self.api_url, self.port, self.directory = api_url, port, directory
         self.process: subprocess.Popen | None = None
         self.log_path = Path(tempfile.gettempdir()) / f"xingyu-e2e-frontend-{os.getpid()}.log"
         self._log = None
 
     def start(self) -> None:
-        frontend = frontend_dir()
-        _check_port("frontend", self.port, "--frontend-port")
-        if (pid := _running_dev_server(frontend)) is not None:
-            raise StartupError(
-                "frontend",
-                f"domalyze_frontend 已有 dev server 在跑（pid {pid}）；Next.js 同一個專案不能同時跑兩個。"
-                f"請自行結束它（taskkill /PID {pid} /F）再重跑，E2E 不會替你關。",
-            )
+        frontend = self.directory
         env = {**os.environ, "NEXT_PUBLIC_BASE_API_URL": self.api_url, "NEXT_TELEMETRY_DISABLED": "1"}
         next_bin = frontend / "node_modules" / "next" / "dist" / "bin" / "next"
         self._log = self.log_path.open("wb")

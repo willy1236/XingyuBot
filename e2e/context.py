@@ -23,6 +23,7 @@ class Ctx:
     http: httpx.Client
     browser_context: Any = None  # playwright BrowserContext；API 情境不需要
     current_step: str = "（尚未開始）"
+    last_request: str = ""
     _page: Any = field(default=None, repr=False)
 
     def step(self, name: str) -> None:
@@ -32,6 +33,7 @@ class Ctx:
     def api(self, method: str, path: str, *, expect: int = 200, **kwargs) -> Any:
         """呼叫 API 並回傳 JSON；HTTP 狀態不是預期值就失敗，訊息含狀態與回應內容。"""
         response = self.http.request(method, path, **kwargs)
+        self.last_request = f"{method} {path} → HTTP {response.status_code}"
         if response.status_code != expect:
             raise Failure(f"{method} {path} 回 HTTP {response.status_code}（預期 {expect}）：{response.text[:300]}")
         return response.json() if response.content else None
