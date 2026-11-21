@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from e2e.context import Ctx
+from e2e.context import Ctx, Failure
 from e2e.fakes import CHANNEL_GENERAL, GUILD_ID, GUILD_NAME, USER
 from e2e.scenarios import scenario
 from starlib.database import NotifyChannelType
@@ -21,7 +21,8 @@ def guild_list(ctx: Ctx) -> None:
 
 @scenario("api")
 def notify_save(ctx: Ctx) -> None:
-    assert any(s.key == API_NOTIFY for s in CHANNEL_SPECS)
+    if not any(s.key == API_NOTIFY for s in CHANNEL_SPECS):
+        raise Failure(f"CHANNEL_SPECS 沒有 {API_NOTIFY}，情境用的通知種類已不存在")
     url = f"/dashboard/guilds/{GUILD_ID}"
     ctx.step("儲存新增加入紀錄頻道")
     saved = ctx.api(
@@ -32,7 +33,7 @@ def notify_save(ctx: Ctx) -> None:
     items = ctx.api("GET", f"{url}/notifies")["channel_notifies"]
     item = next((i for i in items if i["key"] == API_NOTIFY), None)
     if item is None:
-        raise AssertionError("通知清單裡找不到剛儲存的通知")
+        raise Failure("通知清單裡找不到剛儲存的通知")
     ctx.expect(item["channel"]["name"], "一般", "通知清單的頻道名稱")
 
 

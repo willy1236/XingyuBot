@@ -100,9 +100,22 @@ class Preflight:
     key: Path
 
 
+def _check_browser() -> None:
+    """Playwright 的 chromium 沒裝時，到跑第一個瀏覽器情境才會失敗；先擋下並說明怎麼裝。"""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        installed = Path(pw.chromium.executable_path).is_file()
+    if not installed:
+        raise StartupError(
+            "browser", "Playwright 的 chromium 還沒安裝。執行 `uv run playwright install chromium` 後重跑。"
+        )
+
+
 def preflight(args: Args) -> Preflight:
-    """啟動任何東西之前的檢查：憑證、frontend 目錄、port、frontend 是否已有 dev server。"""
+    """啟動任何東西之前的檢查：憑證、frontend 目錄、瀏覽器、port、frontend 是否已有 dev server。"""
     cert, key = cert_files()
+    _check_browser()
     frontend = frontend_dir()
     _check_port("api", args.api_port, "--api-port")
     _check_port("frontend", args.frontend_port, "--frontend-port")
