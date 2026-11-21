@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import json
 from datetime import timedelta
-from types import SimpleNamespace
 
 import pytest
 from fastapi import APIRouter, FastAPI
@@ -18,24 +17,28 @@ from sqlmodel import delete
 from starlib import sqldb as real_sqldb
 from starlib import website_stats
 from starlib.database import APIType, DashboardSession, OAuthToken, WebsiteLinkClick, WebsiteWeeklyActivity
-from starlib.identity import resolver as resolver_module
 from starlib.oauth import DiscordOAuth
 from starlib.oauth.models import DiscordUser
 from starlib.utils import nowtz
 from starServer import bot_website, dashboard
-from starServer.dashboard import auth, channel_mods, config, db, discord_users, session
-from tests.helpers.identity import FakeDirectory
+from starServer.dashboard import auth, channel_mods, db, session
+from tests.helpers.dashboard_setup import (  # noqa: F401  其他測試檔從這裡 import
+    BOT_TWITCH_ID,
+    USER_ID,
+    FakeModerators,
+    install_fakes,
+    make_domalyze_session,
+    make_session,
+    make_twitch_session,
+)
 
 FRONTEND = "https://domalyze.net"
 ORIGINS = ["https://domalyze.net", "https://www.domalyze.net"]
 STATE = "state-abc"
-USER_ID = "111111111111111111"
 
 
 @pytest.fixture
 def dashboard_env(monkeypatch, repo):
-    monkeypatch.setattr(config, "frontend_url", lambda: FRONTEND)
-    monkeypatch.setattr(config, "allowed_origins", lambda: ORIGINS)
     for module in (db, session, auth, website_stats):
         monkeypatch.setattr(module, "sqldb", repo)
     monkeypatch.setattr(website_stats, "_recorded", (website_stats.date.min, set()))
@@ -46,49 +49,13 @@ def dashboard_env(monkeypatch, repo):
     # 不讀真實的 oauth client，但 credential_id 要是真的（OAuthToken 有外鍵）
     credential_id = real_sqldb.get_oauth_client(APIType.Discord, 4).credential_id
     real_sqldb.release_session()
-    fake_client = SimpleNamespace(
-        client_id="cid",
-        client_secret="secret",
-        redirect_uri="https://api.example.test/oauth/discord",
-        default_scopes=["identify"],
-        credential_id=credential_id,
-        # 假的 auth server：預設查無此人，各測試可設定 directory.accounts
-        directory=FakeDirectory(),
-    )
-    monkeypatch.setattr(auth, "_oauth_client_cache", fake_client)
-    monkeypatch.setattr(resolver_module, "_directory", fake_client.directory)
-    monkeypatch.setattr(session, "_followed", {})
-    monkeypatch.setattr(session, "_inflight", {})
-    monkeypatch.setattr(session, "_unavailable_until", 0.0)
-    monkeypatch.setattr(discord_users, "_fetched", {})
-    # mod 名單不打真的 Helix：預設每個頻道都沒有 mod，各測試用 `twitch_mods` fixture 設定
-    mods = FakeModerators()
     monkeypatch.setattr(channel_mods, "sqldb", repo)
-    monkeypatch.setattr(channel_mods, "_cache", {})
-    monkeypatch.setattr(channel_mods, "_inflight", {})
-    monkeypatch.setattr(channel_mods, "_fetch", mods.fetch)
-    monkeypatch.setattr(channel_mods.twitch_tokens, "bot_user_id_blocking", lambda: BOT_TWITCH_ID)
-    fake_client.moderators = mods
-    return fake_client
-
-
-#: 測試用的 bot 帳號 Twitch ID
-BOT_TWITCH_ID = "9000"
-
-
-class FakeModerators:
-    """假的 Helix mod 名單：`lists[頻道 ID]` 是 {user_id: 名稱}，或 channel_mods 的 _Unconfirmable／_Unavailable。"""
-
-    def __init__(self):
-        self.lists: dict[int, object] = {}
-        self.calls: list[int] = []
-
-    def set(self, channel_id: int | str, *mods: tuple[str, str]) -> None:
-        self.lists[int(channel_id)] = dict(mods)
-
-    async def fetch(self, twitch_id: int):
-        self.calls.append(twitch_id)
-        return self.lists.get(twitch_id, {})
+    return install_fakes(
+        monkeypatch.setattr,
+        frontend_url=FRONTEND,
+        allowed_origins=ORIGINS,
+        credential_id=credential_id,
+    )
 
 
 @pytest.fixture
@@ -197,52 +164,6 @@ def encode_cookie(state=STATE, purpose="login", next="/dashboard/guilds/1", orig
 def login(client: TestClient, spy: Spy, **cookie):
     client.cookies.set("dashboard_oauth", encode_cookie(**cookie))
     return client.get("/oauth/discord", params={"code": "c", "state": STATE})
-
-
-def make_session(repo, user_id=USER_ID, last_used_ago=timedelta(0), session_id="sid") -> str:
-    repo.add(
-        DashboardSession(
-            session_id=session_id,
-            discord_user_id=user_id,
-            name="Some One",
-            avatar=None,
-            last_used_at=nowtz() - last_used_ago,
-        )
-    )
-    return session_id
-
-
-def make_domalyze_session(repo, account_id, user_id: str | None = USER_ID, session_id="dsid") -> str:
-    """析域登入的 session；user_id 為 None 時是沒有 Discord 身分的析域 session。"""
-    repo.add(
-        DashboardSession(
-            session_id=session_id,
-            discord_user_id=user_id,
-            name="willy",
-            avatar=None,
-            account_id=account_id,
-            via_domalyze=True,
-            login_method="domalyze",
-        )
-    )
-    return session_id
-
-
-def make_twitch_session(repo, twitch_id="777", session_id="tsid", login="streamer", name="Streamer") -> str:
-    repo.add(
-        DashboardSession(
-            session_id=session_id,
-            discord_user_id=None,
-            name=name,
-            avatar=f"https://static-cdn.jtvnw.net/{twitch_id}.png",
-            login_method="twitch",
-            twitch_user_id=twitch_id,
-            twitch_login=login,
-            twitch_name=name,
-            twitch_avatar=f"https://static-cdn.jtvnw.net/{twitch_id}.png",
-        )
-    )
-    return session_id
 
 
 def set_cookies(response) -> list[str]:
