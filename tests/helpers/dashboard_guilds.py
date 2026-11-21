@@ -4,26 +4,22 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-import discord as dpy
 import pytest
 
 from starServer.dashboard import guilds
-
-ADMIN = 0x8
-MANAGE_CHANNELS = 0x10
-MANAGE_GUILD = 0x20
-KICK = 0x2
-BAN = 0x4
-MANAGE_MESSAGES = 0x2000
-MANAGE_ROLES = 0x10000000
-MODERATE = 0x10000000000
-
-
-def g(gid: str, name: str, permissions: int = 0, owner: bool = False) -> dict:
-    """使用者在伺服器 gid 的成員資料：permissions 是 guild_permissions 的 bits，owner 表示是伺服器擁有者。"""
-    return {"id": gid, "name": name, "owner": owner, "permissions": permissions}
+from tests.helpers.dashboard_setup import (  # noqa: F401  其他測試檔從這裡 import
+    ADMIN,
+    BAN,
+    KICK,
+    MANAGE_CHANNELS,
+    MANAGE_GUILD,
+    MANAGE_MESSAGES,
+    MANAGE_ROLES,
+    MODERATE,
+    bot_guild,
+    g,
+    member,
+)
 
 
 class FakeDiscord:
@@ -46,18 +42,3 @@ def discord(monkeypatch, dashboard_env, repo) -> FakeDiscord:
 
     monkeypatch.setattr(guilds, "_member_perms", member_perms)
     return fake
-
-
-def member(user_id: str | int, permissions: int = 0):
-    return SimpleNamespace(id=int(user_id), guild_permissions=dpy.Permissions(permissions))
-
-
-def bot_guild(gid: int, name: str, members=(), owner_id: int = 1, icon: str | None = None):
-    by_id = {m.id: m for m in members}
-    return SimpleNamespace(
-        id=gid,
-        name=name,
-        owner_id=owner_id,
-        icon=SimpleNamespace(url=icon) if icon else None,
-        get_member=by_id.get,
-    )
