@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import socket
@@ -86,6 +87,13 @@ def _running_dev_server(frontend: Path) -> int | None:
     return pid if psutil.pid_exists(pid) else None
 
 
+def _ignore_reset(loop, context: dict) -> None:
+    """瀏覽器關閉連線時 Windows 的 proactor 會丟 ConnectionResetError，不是產品問題，不印出來干擾輸出。"""
+    if isinstance(context.get("exception"), ConnectionResetError):
+        return
+    loop.default_exception_handler(context)
+
+
 class ApiServer:
     """同行程內的 uvicorn：app 與假依賴都在這個行程，覆蓋資料才收得到。"""
 
@@ -109,7 +117,7 @@ class ApiServer:
         )
         self.server = uvicorn.Server(config)
         self.server.install_signal_handlers = lambda: None  # 不在主執行緒，不能裝 signal handler
-        self.thread = threading.Thread(target=self.server.run, name="e2e-api", daemon=True)
+        self.thread = threading.Thread(target=self._serve, name="e2e-api", daemon=True)
         self.thread.start()
         deadline = time.monotonic() + TIMEOUT_API_START
         while not self.server.started:
@@ -118,6 +126,14 @@ class ApiServer:
             if time.monotonic() > deadline:
                 raise StartupError("api", f"Web API 在 {TIMEOUT_API_START} 秒內沒有啟動完成。")
             time.sleep(0.1)
+
+    def _serve(self) -> None:
+        loop = asyncio.new_event_loop()
+        loop.set_exception_handler(_ignore_reset)
+        try:
+            loop.run_until_complete(self.server.serve())
+        finally:
+            loop.close()
 
     def stop(self) -> None:
         if self.server is not None:

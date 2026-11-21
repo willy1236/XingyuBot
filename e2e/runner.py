@@ -13,7 +13,7 @@ import time
 import traceback
 from dataclasses import dataclass
 
-from e2e.args import TIMEOUT_PAGE, Args, StartupError
+from e2e.args import TIMEOUT_ACTION, TIMEOUT_PAGE, Args, StartupError
 from e2e.context import SESSION_COOKIE, Ctx, Failure
 
 #: 要收覆蓋的伺服器端目錄
@@ -68,6 +68,9 @@ def _run_scenario(scenario, ctx: Ctx) -> Result:
         return Result(scenario.name, True, time.monotonic() - started)
     except Failure as e:
         message = str(e)
+    except AssertionError as e:
+        # playwright 的 expect 以 AssertionError 回報，訊息含定位器與預期；只留前幾行，不印整頁 snapshot
+        message = "畫面上的元素與預期不符：" + " / ".join(line.strip() for line in str(e).strip().splitlines()[:3])
     except PlaywrightTimeout as e:
         message = f"畫面上找不到或等不到預期的元素：{str(e).strip().splitlines()[0]}"
     except PlaywrightError as e:
@@ -131,6 +134,7 @@ def run(args: Args) -> int:
         from e2e.scenarios import load_all
 
         selected = [s for s in load_all() if not args.only or any(o in s.name for o in args.only)]
+        _prewarm(args)
         results = _run_scenarios(args, session_id, selected)
         passed = sum(r.ok for r in results)
         print(f"\n總結：{passed}/{len(results)} 個情境通過")
@@ -152,6 +156,23 @@ def run(args: Args) -> int:
         temp_db.drop(*([sqldb.engine] if sqldb is not None else []))
         print(f"E2E：覆蓋資料 {args.cov_out}")
     return exit_code
+
+
+def _prewarm(args: Args) -> None:
+    """next dev 第一次請求某個路由才編譯它：先逐一請求，瀏覽器情境就不必等編譯。"""
+    import httpx
+
+    from e2e.scenarios.dashboard import PREWARM
+
+    t0 = time.monotonic()
+    for path in PREWARM:
+        try:
+            httpx.get(args.frontend_url + path, verify=False, timeout=TIMEOUT_PAGE)
+        except httpx.HTTPError as e:
+            raise StartupError(
+                "frontend", f"預熱 {path} 失敗：{e!r}。next dev 編譯該頁時出錯，請看 frontend 輸出。"
+            ) from e
+    print(f"E2E：dashboard 路由預熱完成（{time.monotonic() - t0:.0f}s）")
 
 
 def _run_scenarios(args: Args, session_id: str, selected) -> list[Result]:
@@ -176,7 +197,8 @@ def _run_scenarios(args: Args, session_id: str, selected) -> list[Result]:
                 browser_context = None
                 if scenario.kind == "dashboard":
                     browser_context = browser.new_context(ignore_https_errors=True)
-                    browser_context.set_default_timeout(TIMEOUT_PAGE * 1000)
+                    browser_context.set_default_timeout(TIMEOUT_ACTION * 1000)
+                    browser_context.set_default_navigation_timeout(TIMEOUT_PAGE * 1000)
                     browser_context.add_cookies(
                         [
                             {

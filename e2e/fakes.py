@@ -78,27 +78,24 @@ class FakeGuild:
         self.members = {
             m.id: m for m in (FakeMember(USER, "Some One", permissions=ADMIN), FakeMember(FRIEND, "Friend"))
         }
-        self.channels = {
-            c.id: c
-            for c in (
-                FakeChannel(CHANNEL_GENERAL, "一般", position=1),
-                FakeChannel(CHANNEL_ANNOUNCE, "公告", discord.ChannelType.news, position=2),
-            )
-        }
+        self.channels = [
+            FakeChannel(CHANNEL_GENERAL, "一般", position=1),
+            FakeChannel(CHANNEL_ANNOUNCE, "公告", discord.ChannelType.news, position=2),
+        ]
         self.roles = [_role(GUILD_ID, "@everyone", 0, default=True), _role(ROLE_MEMBER, "成員", 1)]
 
     @property
     def text_channels(self):
-        return list(self.channels.values())
+        return list(self.channels)
 
     def get_member(self, uid: int):
         return self.members.get(uid)
 
     def get_channel(self, cid: int):
-        return self.channels.get(cid)
+        return next((c for c in self.channels if c.id == cid), None)
 
     def get_channel_or_thread(self, cid: int):
-        return self.channels.get(cid)
+        return next((c for c in self.channels if c.id == cid), None)
 
     def get_role(self, rid: int):
         return next((r for r in self.roles if r.id == rid), None)
@@ -121,6 +118,12 @@ class FakeBot:
 
     def submit(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.loop)
+
+    def get_user(self, uid: int):
+        for guild in self.guilds:
+            if (member := guild.get_member(uid)) is not None:
+                return SimpleNamespace(global_name=member.name, name=member.name, avatar=None)
+        return None
 
     async def is_owner(self, user) -> bool:
         return False

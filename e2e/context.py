@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from e2e.args import TIMEOUT_PAGE, Args
+from e2e.args import TIMEOUT_ACTION, TIMEOUT_PAGE, Args
 
 SESSION_COOKIE = "dashboard_session"
 
@@ -45,7 +45,8 @@ class Ctx:
     def page(self):
         if self._page is None:
             self._page = self.browser_context.new_page()
-            self._page.set_default_timeout(TIMEOUT_PAGE * 1000)
+            self._page.set_default_timeout(TIMEOUT_ACTION * 1000)
+            self._page.set_default_navigation_timeout(TIMEOUT_PAGE * 1000)
         return self._page
 
     def goto(self, path: str) -> None:
