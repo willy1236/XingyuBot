@@ -23,3 +23,4 @@ database/localhost+2-key.pem
 
 # worktree 的 .venv 是連到主 checkout 的 symlink／junction，.venv/ 擋不到
 /.venv
+/.venv-e2e
