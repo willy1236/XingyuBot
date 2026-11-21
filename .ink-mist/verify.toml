@@ -1,0 +1,17 @@
+# AI 驗證工具包的設定。閘門讀的是任務開工 commit 的版本，任務期間改它不影響該任務。
+
+# {python} 是主 checkout 的 .venv 直譯器（不用 uv run，以免在暫時 worktree 建新環境）。
+test_command = "{python} -m pytest"
+lint_command = "{python} -m ruff check"
+
+# 這些路徑上的行不要求覆蓋。
+test_paths = ["tests/**"]
+
+# 建暫時 worktree 時從主 checkout 複製的 gitignored 檔；主 checkout 沒有的會略過。
+# settings 與 temp_db.redirect() 都要讀 .env，缺了測試連不上資料庫。
+local_files = [
+    ".env",
+    ".env.development",
+    "database/localhost+2.pem",
+    "database/localhost+2-key.pem",
+]
