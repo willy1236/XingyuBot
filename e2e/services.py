@@ -102,7 +102,12 @@ class Preflight:
 
 def _check_browser() -> None:
     """Playwright 的 chromium 沒裝時，到跑第一個瀏覽器情境才會失敗；先擋下並說明怎麼裝。"""
-    from playwright.sync_api import sync_playwright
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as e:
+        raise StartupError(
+            "browser", "沒有安裝 playwright。執行 `uv sync` 後再 `uv run playwright install chromium`。"
+        ) from e
 
     with sync_playwright() as pw:
         installed = Path(pw.chromium.executable_path).is_file()
