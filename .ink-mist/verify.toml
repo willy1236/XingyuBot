@@ -15,3 +15,13 @@ local_files = [
     "database/localhost+2.pem",
     "database/localhost+2-key.pem",
 ]
+
+# 風險分級：命中這些路徑，或非測試檔改動超過門檻（新增＋刪除行數），閘門視為高風險。
+[risk]
+high_paths = [
+    "starServer/dashboard/**",
+    "starlib/database/postgresql/**",
+]
+high_changed_lines = 150
+# 這些檔案的改動不計入上面的行數（lockfile、文件）。
+ignore_paths = ["uv.lock", "docs/**", "**/*.md"]
