@@ -23,3 +23,5 @@ high_paths = [
     "starlib/database/postgresql/**",
 ]
 high_changed_lines = 150
+# 這些檔案的改動不計入上面的行數（lockfile、文件）。
+ignore_paths = ["uv.lock", "docs/**", "**/*.md"]
