@@ -548,6 +548,20 @@ class TwitchTimer(BasicSchema, table=True):
     )
 
 
+class TwitchRegular(BasicSchema, table=True):
+    """頻道的常客名單。Twitch 帳號改名後仍以 user_id 辨識。"""
+
+    __tablename__ = "twitch_regular"
+
+    twitch_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    user_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    user_login: str = Field(nullable=False)
+    user_name: str = Field(nullable=False)
+    created_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
 class TwitchEventResponse(BasicSchema, table=True):
     """事件回應（W-07）；沒有資料列時視為開啟並使用程式碼裡的預設文字"""
 
