@@ -15,7 +15,7 @@ from starServer.dashboard.db import run_db
 
 SERVICE = "twitch"
 
-type CacheName = Literal["twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response"]
+type CacheName = Literal["twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response", "twitch_regular"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,5 +122,5 @@ async def check_template(twitch_id: int, template: str) -> TemplateCheck:
 
 
 def invalidate(cache: CacheName, twitch_id: int) -> None:
-    """通知 bot 重讀某頻道的設定（頻道設定、自訂指令、計時訊息或事件回應）。bot 沒在跑時沒有影響，下次啟動會重讀。"""
+    """通知 bot 重讀某頻道的設定或常客名單。bot 沒在跑時沒有影響，下次啟動會重讀。"""
     cache_invalidation.invalidate(cache, str(twitch_id))

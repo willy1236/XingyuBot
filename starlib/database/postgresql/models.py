@@ -519,7 +519,7 @@ class TwitchChatCommand(BasicSchema, table=True):
     #: 全體冷卻秒數；既有指令的預設 30 等同舊行為
     global_cooldown: int = Field(default=30, sa_column=Column(Integer, nullable=False, server_default=text("30")))
     user_cooldown: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
-    #: everyone < subscriber < vip < mod < broadcaster
+    #: everyone < subscriber < regular < vip < mod < broadcaster
     permission: str = Field(
         default="everyone", sa_column=Column(String, nullable=False, server_default=text("'everyone'"))
     )

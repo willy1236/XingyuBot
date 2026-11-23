@@ -339,3 +339,4 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 | `twitch_cmd` | 自訂指令 |
 | `twitch_timer` | 計時訊息 |
 | `twitch_event_response` | 事件回應 |
+| `twitch_regular` | 常客名單 |

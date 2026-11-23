@@ -19,7 +19,7 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starServer.twitch_bot import channels, commands, events, state, timers
+from starServer.twitch_bot import channels, commands, events, state, timers, viewers
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +125,7 @@ async def run():
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, channels.on_ready)
+    chat.register_event(ChatEvent.READY, viewers.on_ready)
     chat.register_event(ChatEvent.MESSAGE, commands.on_message)
     chat.register_event(ChatEvent.SUB, events.on_sub)
     chat.register_event(ChatEvent.JOINED, events.on_bot_joined)
@@ -138,8 +139,10 @@ async def run():
     chat.register_command("edit_cmd", commands.edit_chat_command)
     chat.register_command("remove_cmd", commands.remove_chat_command)
     chat.register_command("list_cmd", commands.list_chat_command)
+    chat.register_command("regular", viewers.regular_command)
     # TODO: modify_channel_information
 
+    await viewers.load_regulars()
     chat.start()
     await asyncio.sleep(5)
     await _wait_for_chat_loop()

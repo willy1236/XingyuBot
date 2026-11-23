@@ -204,7 +204,7 @@ COMMIT;
 
 **風險 / 實作注意**：`_MOD`、`_LEVEL` 由 `PERMISSIONS` 以名稱建表，插入 `regular` 後不必改；實況主層級沿用 `len(PERMISSIONS) - 1`。
 
-**進度**：進行中。常客資料表、名單寫入與修改紀錄隨本次提交。新表由 SQLModel 建立，既有權限欄位使用字串，無需 ALTER。續做 `starServer/twitch_bot/viewers.py` 的觀眾層級、快取及聊天室指令。
+**進度**：進行中。常客資料表、名單寫入與修改紀錄 `4d3c4409`。觀眾層級、Bot 快取及聊天室指令隨本次提交。新表由 SQLModel 建立，既有權限欄位使用字串，無需 ALTER。續做 `starServer/dashboard/channel_regulars.py` 和前端常客頁。
 
 ### C-02 實況主能開啟連結過濾，bot 處罰違規並在聊天室告知
 

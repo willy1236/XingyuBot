@@ -18,11 +18,12 @@ from starlib.twitch_audit import AuditActor
 from starlib.twitch_commands import BUILTIN_COMMANDS, PERMISSIONS, CommandFields, CommandInvalid, CommandMissing
 from starlib.twitch_speech_check import check_template
 from starServer.twitch_bot import speech, state, timers
+from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
 
 #: 權限的層級：觸發者的層級要大於等於指令的權限
-_LEVEL = {name: level for level, name in enumerate(PERMISSIONS)}
+_LEVEL = PERMISSION_LEVELS
 _MOD = _LEVEL["mod"]
 #: 冷卻記錄超過這個數量時，順手清掉已過期的
 _PRUNE_AT = 1000
@@ -82,19 +83,6 @@ async def on_message(msg: ChatMessage):
 # ── 觸發自訂指令 ──────────────────────────────────────────
 
 
-def _level(msg: ChatMessage) -> int:
-    user = msg.user
-    if str(user.id) == str(msg.room.room_id):
-        return len(PERMISSIONS) - 1
-    if user.mod:
-        return _MOD
-    if user.vip:
-        return _LEVEL["vip"]
-    if user.subscriber:
-        return _LEVEL["subscriber"]
-    return 0
-
-
 def _cooldown_passed(twitch_id: int, cmd: TwitchChatCommand, user_id: str) -> bool:
     """一般觀眾的冷卻判斷；通過就記下這次的時間。全體與個人冷卻都要過。"""
     now = _now()
@@ -133,7 +121,7 @@ async def respond_to_chat_command(msg: ChatMessage):
     cmd = sqldb.get_twitch_cmd_response_cache(twitch_id, parts[0].lower())
     if cmd is None or not cmd.enabled:
         return
-    level = _level(msg)
+    level = viewer_level(msg)
     if level < _LEVEL.get(cmd.permission, len(PERMISSIONS) - 1):
         return
     if level < _MOD and not _cooldown_passed(twitch_id, cmd, str(msg.user.id)):
