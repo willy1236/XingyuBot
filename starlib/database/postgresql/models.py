@@ -527,6 +527,9 @@ class TwitchChatCommand(BasicSchema, table=True):
     updated_at: datetime = Field(
         default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
     )
+    builtin_conflict: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
+    )
 
 
 class TwitchTimer(BasicSchema, table=True):

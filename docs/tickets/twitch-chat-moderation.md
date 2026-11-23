@@ -48,7 +48,7 @@ flowchart LR
 
 | # | 卡號 | 進度 | 標題 | 依賴 | 並行組 | 備註 |
 |---|---|---|---|---|---|---|
-| 1 | C-00 | 進行中 | [共用] 新內建指令、修改紀錄類別與聊天室管理權限 | 無 | — | 其他卡都依賴 |
+| 1 | C-00 | 實作完成 | [共用] 新內建指令、修改紀錄類別與聊天室管理權限 | 無 | — | 其他卡都依賴 |
 | 2 | C-01 | 未完成 | 實況主與 mod 能維護常客名單，並把自訂指令限制給常客 | C-00 | — | 提供觀眾層級判斷 |
 | 3 | C-02 | 未完成 | 實況主能開啟連結過濾，bot 處罰違規並在聊天室告知 | C-01 | — | 骨架切片 |
 | 4 | C-03 | 未完成 | 實況主能開啟其餘 7 種過濾器 | C-02 | — | |
@@ -105,7 +105,70 @@ flowchart LR
 
 **風險 / 實作注意**：改名 SQL 要在部署新版 code 之前執行，否則 bot 啟動後內建指令與自訂指令同名的期間，觀眾觸發的是哪個不確定。
 
-**進度**：進行中。共用管理權限 `aaf3c10f`；新增五個修改紀錄類別，前端標籤 `880338b`。續做於 `TwitchChatCommand` 加入同名衝突資料與部署 SQL。
+**進度**：實作完成。共用管理權限 `aaf3c10f`、修改紀錄類別 `22236fe3`，同名衝突遷移與 API 隨本次提交。前端 `c478c1f`、`880338b`。已在隔離 PostgreSQL 驗證改名、別名移除及遷移重跑。續做為 coordinator 審查及 Twitch 實機驗證。
+
+部署新版前，在 PostgreSQL 執行以下交易。改名依候選名稱 `uptime_old`、`uptime_old_2` 等順序取第一個同頻道未使用的名稱，包含檢查現有別名。
+
+```sql
+BEGIN;
+
+ALTER TABLE stardb_basic.twitch_chat_command
+    ADD COLUMN IF NOT EXISTS builtin_conflict json;
+
+DO $migration$
+DECLARE
+    reserved_names constant text[] := ARRAY['title', 'game', 'uptime', 'permit', 'regular'];
+    conflicted record;
+    renamed_from text;
+    new_name text;
+    removed_aliases text[];
+    suffix integer;
+BEGIN
+    FOR conflicted IN
+        SELECT twitch_id, name, aliases
+        FROM stardb_basic.twitch_chat_command
+        WHERE name = ANY(reserved_names) OR aliases && reserved_names::varchar[]
+        ORDER BY twitch_id, name
+    LOOP
+        renamed_from := NULL;
+        new_name := conflicted.name;
+        IF conflicted.name = ANY(reserved_names) THEN
+            renamed_from := conflicted.name;
+            new_name := renamed_from || '_old';
+            suffix := 2;
+            WHILE EXISTS (
+                SELECT 1
+                FROM stardb_basic.twitch_chat_command AS existing
+                WHERE existing.twitch_id = conflicted.twitch_id
+                  AND (existing.name = new_name OR new_name = ANY(existing.aliases))
+            ) LOOP
+                new_name := renamed_from || '_old_' || suffix;
+                suffix := suffix + 1;
+            END LOOP;
+        END IF;
+
+        removed_aliases := ARRAY(
+            SELECT alias
+            FROM unnest(conflicted.aliases) WITH ORDINALITY AS entries(alias, position)
+            WHERE alias = ANY(reserved_names)
+            ORDER BY position
+        );
+        UPDATE stardb_basic.twitch_chat_command
+        SET name = new_name,
+            aliases = ARRAY(
+                SELECT alias
+                FROM unnest(conflicted.aliases) WITH ORDINALITY AS entries(alias, position)
+                WHERE (alias = ANY(reserved_names)) IS NOT TRUE
+                ORDER BY position
+            ),
+            builtin_conflict = json_build_object('renamed_from', renamed_from, 'removed_aliases', removed_aliases)
+        WHERE twitch_id = conflicted.twitch_id AND name = conflicted.name;
+    END LOOP;
+END;
+$migration$;
+
+COMMIT;
+```
 
 ### C-01 實況主與 mod 能維護常客名單，並把自訂指令限制給常客
 
