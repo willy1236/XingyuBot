@@ -7,7 +7,7 @@ import threading
 from aiohttp import ClientError
 from twitchAPI.chat import ChatCommand, ChatMessage, EventData
 from twitchAPI.helper import first
-from twitchAPI.object.api import User
+from twitchAPI.object.api import TwitchUser
 from twitchAPI.type import TwitchAPIException
 
 from starlib import twitch_regulars
@@ -76,7 +76,7 @@ def viewer_level(msg: ChatMessage) -> int:
     return PERMISSION_LEVELS["everyone"]
 
 
-def _change_regular(twitch_id: int, actor: AuditActor, user: User, *, add: bool) -> bool:
+def _change_regular(twitch_id: int, actor: AuditActor, user: TwitchUser, *, add: bool) -> bool:
     try:
         if add:
             changed = twitch_regulars.add(twitch_id, actor, "chat", int(user.id), user.login, user.display_name)
@@ -102,7 +102,7 @@ async def regular_command(cmd: ChatCommand) -> None:
     login = login.removeprefix("@").lower()
     try:
         user = await first(state.twitch.get_users(logins=[login]))
-    except (TwitchAPIException, ClientError, TimeoutError):
+    except TwitchAPIException, ClientError, TimeoutError:
         log.warning("查詢 Twitch 帳號失敗", exc_info=True)
         await cmd.reply("目前無法查詢 Twitch 帳號，請稍後再試")
         return

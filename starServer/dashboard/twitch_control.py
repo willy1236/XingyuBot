@@ -105,7 +105,8 @@ async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
     return await run_db(lambda: twitch_tokens.broadcaster_token_blocking(twitch_id))
 
 
-async def _credentials(twitch_id: int) -> tuple[str, str] | TokenInvalid:
+async def broadcaster_credentials(twitch_id: int) -> tuple[str, str] | TokenInvalid:
+    """實況主的 access token 與它所屬的 Twitch OAuth 應用程式 client ID。"""
     token = await broadcaster_token(twitch_id)
     if isinstance(token, TokenInvalid):
         return token
@@ -118,7 +119,7 @@ async def check_template(twitch_id: int, template: str) -> TemplateCheck:
     W-05～W-07 的儲存端點先呼叫它：blocked 回 422 automod_blocked，unavailable 回 503 automod_unavailable。
     token 與 client id 的 DB 查詢走後台專屬的 executor。
     """
-    return await twitch_speech_check.check_template(twitch_id, template, get_credentials=_credentials)
+    return await twitch_speech_check.check_template(twitch_id, template, get_credentials=broadcaster_credentials)
 
 
 def invalidate(cache: CacheName, twitch_id: int) -> None:

@@ -43,7 +43,13 @@ def add(twitch_id: int, actor: AuditActor, source: AuditSource, user_id: int, lo
             return False
         sqldb.session.add(TwitchRegular(twitch_id=twitch_id, user_id=user_id, user_login=login, user_name=name))
         record_change(
-            twitch_id, actor, source, "regular", str(user_id), "create", None,
+            twitch_id,
+            actor,
+            source,
+            "regular",
+            str(user_id),
+            "create",
+            None,
             {"user_login": login, "user_name": name},
         )
     cache_invalidation.invalidate("twitch_regular", str(twitch_id))
@@ -56,8 +62,14 @@ def remove(twitch_id: int, actor: AuditActor, source: AuditSource, user_id: int)
         if row is None:
             return False
         record_change(
-            twitch_id, actor, source, "regular", str(user_id), "delete",
-            {"user_login": row.user_login, "user_name": row.user_name}, None,
+            twitch_id,
+            actor,
+            source,
+            "regular",
+            str(user_id),
+            "delete",
+            {"user_login": row.user_login, "user_name": row.user_name},
+            None,
         )
         sqldb.session.delete(row)
     cache_invalidation.invalidate("twitch_regular", str(twitch_id))
