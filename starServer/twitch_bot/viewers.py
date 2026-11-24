@@ -94,14 +94,14 @@ async def regular_command(cmd: ChatCommand) -> None:
 
     if not await may_manage(cmd, "管理常客"):
         return
-    parts = cmd.parameter.split()
+    parts = cmd.parameter.split(maxsplit=1)
     if len(parts) != 2 or parts[0] not in {"add", "remove"} or parts[1] == "@":
         await cmd.reply("用法：!regular add|remove <使用者>")
         return
     action, login = parts
     login = login.removeprefix("@").lower()
     try:
-        user = await first(state.twitch.get_users(logins=[login]))
+        user = await first(state.twitch.get_users(logins=[login])) if twitch_regulars.valid_login(login) else None
     except TwitchAPIException, ClientError, TimeoutError:
         log.warning("查詢 Twitch 帳號失敗", exc_info=True)
         await cmd.reply("目前無法查詢 Twitch 帳號，請稍後再試")

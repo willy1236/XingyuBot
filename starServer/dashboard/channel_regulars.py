@@ -25,6 +25,8 @@ class RegularBody(BaseModel):
 
 
 async def _find_user(twitch_id: int, login: str) -> tuple[int, str, str]:
+    if not twitch_regulars.valid_login(login):
+        raise DashboardError(404, "user_not_found")
     credentials = await twitch_control.broadcaster_credentials(twitch_id)
     if isinstance(credentials, TokenInvalid):
         raise DashboardError(503, "user_lookup_unavailable")
@@ -72,8 +74,6 @@ async def add_regular(
     access: ChannelAccess = Depends(require_enabled_channel),
 ) -> None:
     login = body.login.strip().removeprefix("@").lower()
-    if not login:
-        raise DashboardError(404, "user_not_found")
     user_id, user_login, user_name = await _find_user(twitch_id, login)
     if not await run_db(
         lambda: twitch_regulars.add(

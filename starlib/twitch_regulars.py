@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from re import fullmatch
 
 from sqlalchemy import text
 from sqlmodel import select
@@ -9,6 +10,10 @@ from sqlmodel import select
 from starlib.database import TwitchRegular, sqldb
 from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import AuditActor, AuditSource, record_change
+
+
+def valid_login(login: str) -> bool:
+    return fullmatch(r"[a-z0-9_]{1,25}", login) is not None
 
 
 def list_regulars(twitch_id: int | None = None) -> list[TwitchRegular]:

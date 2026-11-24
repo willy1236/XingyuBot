@@ -15,7 +15,7 @@ from twitchAPI.chat import ChatCommand, ChatMessage, EventData
 from twitchAPI.helper import first
 from twitchAPI.type import ForbiddenError, TwitchAPIException
 
-from starlib import twitch_moderation
+from starlib import twitch_moderation, twitch_regulars
 from starlib.database import TwitchEnforcementLog, sqldb
 from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_moderation import FilterConfig, ModerationConfig, Stage
@@ -321,17 +321,17 @@ async def permit(cmd: ChatCommand) -> None:
 
     if not await may_manage(cmd, "放行連結") or cmd.room is None:
         return
-    arguments = cmd.parameter.split()
-    if len(arguments) != 1 or arguments[0] == "@":
+    argument = cmd.parameter.strip()
+    if argument in ("", "@"):
         await cmd.reply("用法：!permit <使用者>")
         return
     twitch_id = int(cmd.room.room_id)
     runtime = _channels.get(twitch_id)
     if runtime is None:
         runtime = _channels[twitch_id] = _Channel()
-    login = arguments[0].removeprefix("@").lower()
+    login = argument.removeprefix("@").lower()
     try:
-        user = await first(state.twitch.get_users(logins=[login]))
+        user = await first(state.twitch.get_users(logins=[login])) if twitch_regulars.valid_login(login) else None
     except TwitchAPIException, ClientError, TimeoutError:
         log.warning("查詢 Twitch 帳號失敗", exc_info=True)
         await cmd.reply("目前無法查詢 Twitch 帳號，請稍後再試")
