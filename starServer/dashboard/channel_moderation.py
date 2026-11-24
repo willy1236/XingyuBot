@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from starlib import twitch_moderation
 from starlib.twitch_moderation import FilterValues, InvalidField
+from starlib.twitch_speech_check import substitute
 
 from . import twitch_control
 from .channels import ChannelAccess, require_channel, require_enabled_channel
@@ -53,14 +54,16 @@ async def update_filter(
 ):
     if kind != "link":
         raise DashboardError(400, "invalid_field", field="kind", reason="目前只開放編輯連結過濾")
+    values = body.values.fields()
     try:
-        values = twitch_moderation.validate_link(body.values.fields())
+        twitch_moderation.validate_link(values)
     except InvalidField as exc:
         raise DashboardError(400, "invalid_field", field=exc.field, reason=str(exc)) from None
 
     notice = values["notice"]
     if notice is not None and notice != body.original.notice:
-        match await twitch_control.check_template(twitch_id, notice):
+        template = substitute(notice, {"filter": twitch_moderation.FILTER_LABELS[kind]})
+        match await twitch_control.check_template(twitch_id, template):
             case "blocked":
                 raise DashboardError(422, "automod_blocked")
             case "unavailable":

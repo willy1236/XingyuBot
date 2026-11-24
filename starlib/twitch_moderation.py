@@ -81,16 +81,21 @@ _BARE_TLDS = frozenset(
 )
 _LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 _DOMAIN = rf"(?:{_LABEL}\.)+{_LABEL}"
+_URL_CHARS = r"""[^\s<>"'\x00-\x1f，。！？、；：」』）】]"""
 _LINK = re.compile(
-    rf"(?<![a-z0-9_@.-])(?P<scheme>https?://)?(?P<host>{_DOMAIN})(?![a-z0-9_-]|\.[a-z0-9])"
-    r"(?::[0-9]+)?(?P<path>/[^\s<>\x00-\x1f，。！？、；：」』）】]*)?",
-    re.IGNORECASE | re.ASCII,
+    rf"(?P<url>https?://{_URL_CHARS}*)|"
+    rf"(?ai:(?<![a-z0-9_@.-])(?P<host>{_DOMAIN})(?![a-z0-9_@-]|\.[a-z0-9]))"
+    rf"(?::[0-9]+)?(?P<path>/{_URL_CHARS}*)?",
+    re.IGNORECASE,
 )
 _HOST = re.compile(_DOMAIN, re.IGNORECASE | re.ASCII)
 
 
 def _host_path(host: str, path: str) -> tuple[str, str]:
-    return host.lower().removeprefix("www."), path.lower().rstrip("/")
+    host = host.lower()
+    if host.count(".") > 1:
+        host = host.removeprefix("www.")
+    return host, path.lower().rstrip("/")
 
 
 def _normalize_whitelist_entry(entry: str) -> str:
@@ -116,11 +121,22 @@ def detect_link(text: str, whitelist: Sequence[str]) -> bool:
     """訊息有任何一個不在白名單內的連結時回傳 True。"""
     allowed = [entry.partition("/") for entry in whitelist]
     for match in _LINK.finditer(text):
-        domain = match["host"]
-        if not match["scheme"] and domain.rsplit(".", 1)[1].lower() not in _BARE_TLDS:
-            continue
-        raw_path = (match["path"] or "").split("?", 1)[0].split("#", 1)[0].rstrip(".,!;:)]}")
-        host, path = _host_path(domain, raw_path)
+        if match["url"] is not None:
+            # 白名單看實際的目的地，包含在 URL 帳號欄位中的網域不算。
+            try:
+                url = urlsplit(match["url"].rstrip(".,!;:)}").replace("\\", "/"))
+                domain = url.hostname
+            except ValueError:
+                continue
+            if domain is None:
+                continue
+            raw_path = url.path
+        else:
+            domain = match["host"]
+            if domain.rsplit(".", 1)[1].lower() not in _BARE_TLDS:
+                continue
+            raw_path = (match["path"] or "").split("?", 1)[0].split("#", 1)[0]
+        host, path = _host_path(domain, raw_path.rstrip(".,!;:)]}"))
         if not any(
             (host == allowed_host or host.endswith("." + allowed_host))
             and (not separator or path == "/" + prefix or path.startswith("/" + prefix + "/"))
@@ -137,6 +153,8 @@ def validate_link(values: FilterValues) -> FilterValues:
     notice = values["notice"]
     if notice is not None and (not notice.strip() or len(notice) > NOTICE_MAX_LENGTH):
         raise InvalidField("notice", f"告知文字需為 1 到 {NOTICE_MAX_LENGTH} 字")
+    if notice is not None and any(character in notice for character in "\r\n\0"):
+        raise InvalidField("notice", "告知文字只能有一行")
     raw = values["params"].get("whitelist")
     if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
         raise InvalidField("params", "白名單必須是網域或路徑的清單")
