@@ -3,6 +3,7 @@
 import json
 import re
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any, TypedDict
 from urllib.parse import urlsplit
 
@@ -16,7 +17,20 @@ from starlib.utils import nowtz
 
 FILTER_KINDS = ("link", "blocked_word", "caps", "emote", "symbol", "repetition", "length", "duplicate")
 EXEMPT_LEVELS = ("subscriber", "regular", "vip", "mod")
-FILTER_LABELS = {"link": "連結"}
+FILTER_LABELS = {
+    "link": "連結",
+    "blocked_word": "禁字",
+    "caps": "大寫",
+    "emote": "表情符號過多",
+    "symbol": "符號過多",
+    "repetition": "重複內容",
+    "length": "訊息過長",
+    "duplicate": "跨訊息重複",
+}
+COUNT_RANGE = (1, 500)
+PERCENT_RANGE = (1, 100)
+DUPLICATE_SECONDS_RANGE = (1, 300)
+DUPLICATE_COUNT_RANGE = (2, 100)
 DEFAULT_NOTICE = "{user}，請遵守聊天室的{filter}分享規則。"
 NOTICE_SECONDS = 10
 NOTICE_MAX_LENGTH = 500
@@ -64,6 +78,39 @@ class InvalidField(ValueError):
     def __init__(self, field: str, reason: str):
         super().__init__(reason)
         self.field = field
+
+
+@dataclass(frozen=True, slots=True)
+class _Threshold:
+    default: int
+    label: str
+    bounds: tuple[int, int]
+
+
+_THRESHOLDS = {
+    "caps": {
+        "min_count": _Threshold(8, "大寫字母數", COUNT_RANGE),
+        "min_percent": _Threshold(70, "大寫比例", PERCENT_RANGE),
+    },
+    "emote": {"min_count": _Threshold(3, "表情數", COUNT_RANGE)},
+    "symbol": {"min_count": _Threshold(8, "符號數", COUNT_RANGE)},
+    "repetition": {"min_percent": _Threshold(45, "重複比例", PERCENT_RANGE)},
+    "length": {"min_length": _Threshold(300, "訊息字元數", COUNT_RANGE)},
+    "duplicate": {
+        "window_seconds": _Threshold(30, "比對時間", DUPLICATE_SECONDS_RANGE),
+        "min_count": _Threshold(3, "相同訊息則數", DUPLICATE_COUNT_RANGE),
+    },
+}
+
+
+def _default_params(kind: str) -> dict[str, Any]:
+    match kind:
+        case "link":
+            return {"whitelist": []}
+        case "blocked_word":
+            return {"words": []}
+        case _:
+            return {key: threshold.default for key, threshold in _THRESHOLDS[kind].items()}
 
 
 # 裸網域只認這份封閉清單；有 http(s) 的 URL 則不受 TLD 限制。
@@ -163,9 +210,29 @@ def _validate_whitelist(raw: object) -> list[str]:
     return list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
 
 
-def validate_link(values: FilterValues) -> FilterValues:
+def validate_filter(kind: str, values: FilterValues) -> FilterValues:
+    if kind not in FILTER_KINDS:
+        raise InvalidField("kind", "未知的過濾器")
     _validate_common(values)
-    return {**values, "params": {"whitelist": _validate_whitelist(values["params"].get("whitelist"))}}
+    params = values["params"]
+    validated: dict[str, Any]
+    match kind:
+        case "link":
+            validated = {"whitelist": _validate_whitelist(params.get("whitelist"))}
+        case "blocked_word":
+            words = params.get("words")
+            if not isinstance(words, list) or not all(isinstance(word, str) for word in words):
+                raise InvalidField("params", "禁字必須是文字清單")
+            validated = {"words": list(dict.fromkeys(word.strip() for word in words if word.strip()))}
+        case _:
+            validated = {}
+            for key, threshold in _THRESHOLDS[kind].items():
+                value = params.get(key)
+                lower, upper = threshold.bounds
+                if type(value) is not int or not lower <= value <= upper:
+                    raise InvalidField("params", f"{threshold.label}必須是 {lower} 到 {upper} 的整數")
+                validated[key] = value
+    return {**values, "params": validated}
 
 
 def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
@@ -173,14 +240,14 @@ def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
         return {
             "enabled": False,
             "exempt_level": "vip",
-            "params": {"whitelist": []} if kind == "link" else {},
+            "params": _default_params(kind),
             "notice": None,
             "silent": False,
         }
     return {
         "enabled": row.enabled,
         "exempt_level": row.exempt_level,
-        "params": row.params,
+        "params": {**_default_params(kind), **row.params},
         "notice": row.notice,
         "silent": row.silent,
     }
@@ -230,11 +297,8 @@ def get_config(twitch_id: int) -> ModerationConfig:
     return {"settings": settings, "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS]}
 
 
-def update_link(twitch_id: int, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
-    return _update_filter(twitch_id, "link", actor, validate_link(values), verify)
-
-
-def _update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
+def update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
+    values = validate_filter(kind, values)
     session = sqldb.session
     try:
         # 鎖也涵蓋尚無設定列的頻道。

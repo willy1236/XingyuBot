@@ -304,7 +304,7 @@ COMMIT;
 
 **風險 / 實作注意**：判定函式在每則訊息都會跑，避免對每個禁字各建 regex；可以在設定變更時預先編譯一次。
 
-**進度**：實作中。設定共用驗證與寫入交易隨 `refactor(twitch): 拆出聊天室過濾共用驗證與寫入交易` 提交。沿用 JSON `params`，無需 ALTER。門檻為整數：數量與長度 1–500、比例 1–100%、跨訊息時間 1–300 秒、則數 2–100。續做 `starlib/twitch_moderation.py` 與 `starServer/dashboard/channel_moderation.py` 的各種預設值與設定 API。
+**進度**：實作中。設定共用驗證與寫入交易 `dd227f7a`，八種過濾器的預設值、參數驗證與設定 API 隨 `feat(dashboard): 開放全部聊天室過濾器設定` 提交。沿用 JSON `params`，無需 ALTER。門檻為整數：數量與長度 1–500、比例 1–100%、跨訊息時間 1–300 秒、則數 2–100。續做 `starlib/twitch_moderation.py` 與 `starServer/twitch_bot/moderation.py` 的七種判定與多規則執法。
 
 ### C-04 實況主能自訂處罰階段與犯規次數歸零時間
 

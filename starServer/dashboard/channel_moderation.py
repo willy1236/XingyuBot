@@ -52,11 +52,9 @@ async def update_filter(
     body: PutBody,
     access: ChannelAccess = Depends(require_enabled_channel),
 ):
-    if kind != "link":
-        raise DashboardError(400, "invalid_field", field="kind", reason="目前只開放編輯連結過濾")
     values = body.values.fields()
     try:
-        twitch_moderation.validate_link(values)
+        twitch_moderation.validate_filter(kind, values)
     except InvalidField as exc:
         raise DashboardError(400, "invalid_field", field=exc.field, reason=str(exc)) from None
 
@@ -77,5 +75,5 @@ async def update_filter(
             raise conflict.to_error()
 
     actor = access.actor
-    saved = await run_db(lambda: twitch_moderation.update_link(twitch_id, actor, values, verify))
+    saved = await run_db(lambda: twitch_moderation.update_filter(twitch_id, kind, actor, values, verify))
     return {"filter": saved}
