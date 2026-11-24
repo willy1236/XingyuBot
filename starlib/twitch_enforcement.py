@@ -35,7 +35,7 @@ def _entry_json(row: TwitchEnforcementLog) -> dict:
 
 def page_json(rows: list[TwitchEnforcementLog]) -> dict:
     """列表端點的回應：這一頁的紀錄與有沒有下一頁。"""
-    return {"entries": [_entry_json(row) for row in rows], "has_next": len(rows) == PAGE_SIZE}
+    return {"entries": [_entry_json(row) for row in rows[:PAGE_SIZE]], "has_next": len(rows) > PAGE_SIZE}
 
 
 def _cutoff():
@@ -43,13 +43,13 @@ def _cutoff():
 
 
 def list_page(session: Session, twitch_id: int, offset: int = 0) -> list[TwitchEnforcementLog]:
-    """頻道 30 天內的執法紀錄，新的在前，從第 offset 筆起最多 PAGE_SIZE 筆。session 由呼叫端提供。"""
+    """頻道 30 天內的執法紀錄，新的在前，多讀一筆以判斷有沒有下一頁。"""
     stmt = (
         select(TwitchEnforcementLog)
         .where(TwitchEnforcementLog.twitch_id == twitch_id, TwitchEnforcementLog.at >= _cutoff())
         .order_by(col(TwitchEnforcementLog.at).desc(), col(TwitchEnforcementLog.id).desc())
         .offset(max(offset, 0))
-        .limit(PAGE_SIZE)
+        .limit(PAGE_SIZE + 1)
         .execution_options(populate_existing=True)
     )
     return list(session.exec(stmt).all())
