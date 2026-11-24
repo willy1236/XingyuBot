@@ -105,7 +105,7 @@ flowchart LR
 
 **風險 / 實作注意**：改名 SQL 要在部署新版 code 之前執行，否則 bot 啟動後內建指令與自訂指令同名的期間，觀眾觸發的是哪個不確定。
 
-**進度**：實作完成。共用管理權限 `aaf3c10f`、修改紀錄類別 `22236fe3`，同名衝突遷移與 API 隨本次提交。前端 `c478c1f`、`880338b`。已在隔離 PostgreSQL 驗證改名、別名移除及遷移重跑。續做為 coordinator 審查及 Twitch 實機驗證。
+**進度**：實作完成。共用管理權限 `aaf3c10f`、修改紀錄類別 `22236fe3`，同名衝突遷移與 API 隨本次提交。前端 `c478c1f`、`880338b`。已在隔離 PostgreSQL 驗證改名、別名移除及遷移重跑。後台實況資訊每次儲存共用一筆修改紀錄，`target_key` 為 `stream`，沿用 C-09 的驗收規則。續做為 coordinator 審查及 Twitch 實機驗證。
 
 部署新版前，在 PostgreSQL 執行以下交易。改名依候選名稱 `uptime_old`、`uptime_old_2` 等順序取第一個同頻道未使用的名稱，包含檢查現有別名。
 
@@ -304,7 +304,7 @@ COMMIT;
 
 **風險 / 實作注意**：判定函式在每則訊息都會跑，避免對每個禁字各建 regex；可以在設定變更時預先編譯一次。
 
-**進度**：實作完成。設定共用驗證與寫入交易 `dd227f7a`、設定 API `afe18eb7`、七種判定及多規則執法 `44cac021`、前端 `3d80dc3`。沿用 JSON `params`，無需 ALTER。門檻為整數：數量與長度 1–500、比例 1–100%、跨訊息時間 1–300 秒、則數 2–100。後端 60 項 pytest、Python 編譯與 Ruff、前端 9 項 Vitest 與 TypeScript 通過。事後修正：`tests/twitch/test_timers_hooks.py` 的聊天訊息替身補上 `source_room_id`（twitchAPI 4.5.0 的 ChatMessage 一定有此屬性，無 tag 時為 None），修復 C-03 後的 2 項回歸。續做 coordinator 審查與 Twitch 實機確認表情標籤、最重處罰、執法告知、放行及跨程序快取失效。
+**進度**：實作完成。設定共用驗證與寫入交易 `dd227f7a`、設定 API `afe18eb7`、七種判定及多規則執法 `44cac021`、前端 `3d80dc3`。沿用 JSON `params`，無需 ALTER。整數門檻已定案，次數與長度 1–500、比例 1–100%、跨訊息重複時間窗 1–300 秒、訊息數 2–100。自建禁字清單與連結白名單各最多 100 項，每項最多 100 字。後端 60 項 pytest、Python 編譯與 Ruff、前端 9 項 Vitest 與 TypeScript 通過。事後修正：`tests/twitch/test_timers_hooks.py` 的聊天訊息替身補上 `source_room_id`（twitchAPI 4.5.0 的 ChatMessage 一定有此屬性，無 tag 時為 None），修復 C-03 後的 2 項回歸。續做 coordinator 審查與 Twitch 實機確認表情標籤、最重處罰、執法告知、放行及跨程序快取失效。
 
 ### C-04 實況主能自訂處罰階段與犯規次數歸零時間
 
@@ -517,7 +517,7 @@ COMMIT;
 
 **依賴**：C-01（`twitch_regular`）、C-02（另外三張表與離開頻道時的清除）
 
-**進度**：實作完成，隨 `feat(twitch): 刪除頻道資料時清除聊天室管理資料` 提交。四張表在刪除端點的交易內按頻道清除，批次刪除保留到呼叫端提交或回滾。提交後沿用 bot 同步，並失效 `twitch_moderation` 與 `twitch_regular`。後端 37 項 pytest、Python 編譯與 Ruff 通過。無 schema 變更。續做 coordinator 審查，並在 Twitch 實機確認 bot 離房、重新啟用後的快取與暫存執法狀態。
+**進度**：實作完成，隨 `feat(twitch): 刪除頻道資料時清除聊天室管理資料` 提交。四張表在刪除端點的交易內按頻道清除，批次刪除保留到呼叫端提交或回滾。提交後沿用 bot 同步，並失效 `twitch_moderation` 與 `twitch_regular`。執法紀錄寫入與刪除交易共用頻道列鎖，停用期間不會寫回執法紀錄。已在途的 Helix 操作仍可能完成。若實況主在 bot 收到同步前立即重新啟用，舊的在途作業仍可能寫入新啟用的頻道。後端 37 項 pytest、Python 編譯與 Ruff 通過。無 schema 變更。續做 coordinator 審查，並在 Twitch 實機確認 bot 離房、重新啟用後的快取與暫存執法狀態。
 
 ## 開工前待決
 
