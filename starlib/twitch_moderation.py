@@ -272,29 +272,76 @@ def detect_symbols(text: str, min_count: int) -> bool:
     return count >= min_count
 
 
+def _prefix_matches(chars: Sequence[str | None]) -> list[int]:
+    """Z function: length of the prefix matching at each position."""
+    matches = [0] * len(chars)
+    start = end = 0
+    for index in range(1, len(chars)):
+        if index < end:
+            matches[index] = min(end - index, matches[index - start])
+        while index + matches[index] < len(chars) and chars[matches[index]] == chars[index + matches[index]]:
+            matches[index] += 1
+        if index + matches[index] > end:
+            start, end = index, index + matches[index]
+    return matches
+
+
 def detect_repetition(text: str, min_percent: int) -> bool:
     length = len(text)
     if length < 10:
         return False
-    # For each possible period, mark the union of runs containing at least two copies.
+    threshold = (length * min_percent + 99) // 100
+    # A repeated interval cannot cover characters that occur only once.
+    if (length - len(set(text))) * 2 < threshold:
+        return False
+
     coverage = [0] * (length + 1)
-    for period in range(1, length // 2 + 1):
-        run_start = period
-        for end in range(period, length + 1):
-            if end < length and text[end] == text[end - period]:
-                continue
-            if end - run_start >= period:
-                start = run_start - period
-                if (end - start) * 100 >= length * min_percent:
-                    return True
+    pending = [(0, length)]
+    while pending:
+        start, end = pending.pop()
+        size = end - start
+        if size < 2:
+            continue
+        if size == 2:
+            if text[start] == text[start + 1]:
                 coverage[start] += 1
                 coverage[end] -= 1
-            run_start = end + 1
+            continue
+        middle = size // 2
+        segment = list(text[start:end])
+        left, right = segment[:middle], segment[middle:]
+        left.reverse()
+        backward = _prefix_matches([*left, None, *reversed(segment)])
+        forward = _prefix_matches([*right, None, *segment])
+        left_matches, right_matches = _prefix_matches(left), _prefix_matches(right)
+        # A tandem repeat crossing the midpoint includes a matching pair at distance p
+        # with one member at that midpoint. Extend those pairs in both directions.
+        for period in range(1, size // 2 + 1):
+            for index, before, after in (
+                (
+                    middle - period,
+                    left_matches[period] if period < middle else 0,
+                    forward[len(right) + 1 + middle - period],
+                ),
+                (
+                    middle,
+                    backward[size + 1 - period],
+                    right_matches[period] if period < len(right) else 0,
+                ),
+            ):
+                if before + after < period:
+                    continue
+                if before + period + after >= threshold:
+                    return True
+                coverage[start + index - before] += 1
+                coverage[start + index + period + after] -= 1
+        pending.extend(((start, start + middle), (start + middle, end)))
+
     active = repeated = 0
     for delta in coverage:
         active += delta
         repeated += active > 0
-    return repeated * 100 >= length * min_percent
+    return repeated >= threshold
 
 
 def detect_length(text: str, min_length: int) -> bool:
