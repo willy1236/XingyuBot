@@ -56,7 +56,9 @@ class StubTwitch:
         channel_id = str(query.get("broadcaster_id", ""))
         if self.status is not None:
             payload = {"error": "x", "status": self.status, "message": "x"}
-            return SimpleNamespace(status=self.status, headers={"Ratelimit-Reset": "0"}, json=AsyncMock(return_value=payload))
+            return SimpleNamespace(
+                status=self.status, headers={"Ratelimit-Reset": "0"}, json=AsyncMock(return_value=payload)
+            )
         if method == "GET":
             data = [self._term(term_id, text, channel_id) for term_id, text in self.terms.items()]
             return self._ok(200, {"data": data, "pagination": {}})

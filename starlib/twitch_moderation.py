@@ -274,8 +274,7 @@ _COMMON_FULLWIDTH_PUNCTUATION = frozenset("。，、！？：；「」『』（�
 
 def detect_symbols(text: str, min_count: int) -> bool:
     count = sum(
-        char not in _COMMON_FULLWIDTH_PUNCTUATION and category(char)[0] in "PS"
-        for char in _EMOJI.sub("", text)
+        char not in _COMMON_FULLWIDTH_PUNCTUATION and category(char)[0] in "PS" for char in _EMOJI.sub("", text)
     )
     return count >= min_count
 

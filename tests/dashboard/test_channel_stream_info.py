@@ -57,9 +57,7 @@ class StubHelix:
                 self.title = params["title"]
             if "game_id" in params:
                 self.game_id = params["game_id"]
-                self.game_name = next(
-                    (n for i, n in self.games() if i == self.game_id), self.game_name
-                )
+                self.game_name = next((n for i, n in self.games() if i == self.game_id), self.game_name)
             return httpx.Response(204, request=request)
         if path.endswith("/games"):
             data = [{"id": i, "name": n} for i, n in self.games() if i == params["id"]]

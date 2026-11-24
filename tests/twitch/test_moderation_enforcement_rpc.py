@@ -153,7 +153,10 @@ def test_Helix_400_視為不在處罰中_403_視為_bot_不是_mod(helix, handle
     start_chat()
     helix.install()
     payload = lift_payload(channel_id)
-    helix.side_effect = [helix_punishment(payload), helix_response(status, {"error": "x", "status": status, "message": "x"})]
+    helix.side_effect = [
+        helix_punishment(payload),
+        helix_response(status, {"error": "x", "status": status, "message": "x"}),
+    ]
     assert call(handlers, "moderation.lift", payload) == {"result": result}
 
 
@@ -162,7 +165,10 @@ def test_其他_Twitch_失敗拋錯讓後台顯示失敗(helix, handlers, start_
     start_chat()
     helix.install()
     payload = lift_payload(channel_id)
-    helix.side_effect = [helix_punishment(payload), helix_response(status, {"error": "x", "status": status, "message": "x"})]
+    helix.side_effect = [
+        helix_punishment(payload),
+        helix_response(status, {"error": "x", "status": status, "message": "x"}),
+    ]
     assert "moderation.lift" in handlers
     with pytest.raises(Exception):  # noqa: B017 失敗型別由實作決定，只要求不回成功
         call(handlers, "moderation.lift", payload)

@@ -47,7 +47,10 @@ class BotTwitch(Twitch):
         strict = (
             endpoint == "moderation/blocked_terms"
             or (method == "DELETE" and endpoint == "moderation/bans")
-            or (method == "GET" and endpoint in {"users", "streams", "search/categories", "channels", "moderation/banned"})
+            or (
+                method == "GET"
+                and endpoint in {"users", "streams", "search/categories", "channels", "moderation/banned"}
+            )
             or (method == "PATCH" and endpoint == "channels")
         )
         if strict and not 200 <= response.status < 300 and response.status not in (401, 503):

@@ -17,7 +17,9 @@ from starlib.twitch_audit import AuditActor, AuditSource, record_change
 from starlib.utils import nowtz
 
 #: 內建指令由 chat.register_command 處理，自訂指令不可同名
-BUILTIN_COMMANDS = frozenset({"add_cmd", "edit_cmd", "remove_cmd", "list_cmd", "title", "game", "uptime", "permit", "regular"})
+BUILTIN_COMMANDS = frozenset(
+    {"add_cmd", "edit_cmd", "remove_cmd", "list_cmd", "title", "game", "uptime", "permit", "regular"}
+)
 #: 層級由低到高：所有人 < 訂閱者 < 常客 < VIP < mod < 實況主
 PERMISSIONS = ("everyone", "subscriber", "regular", "vip", "mod", "broadcaster")
 

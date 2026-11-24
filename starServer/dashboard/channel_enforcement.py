@@ -34,7 +34,9 @@ async def _find(twitch_id: int, log_id: int) -> TwitchEnforcementLog:
 async def list_enforcement(
     twitch_id: int, offset: Annotated[int, Query(ge=0)] = 0, _access: ChannelAccess = Depends(require_channel)
 ):
-    return await run_db(lambda: twitch_enforcement.page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset)))
+    return await run_db(
+        lambda: twitch_enforcement.page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset))
+    )
 
 
 @router.post("/channels/{twitch_id}/enforcement/{log_id}/lift")

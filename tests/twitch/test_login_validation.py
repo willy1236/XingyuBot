@@ -20,9 +20,7 @@ def test_dashboard_rejects_invalid_login_before_helix(monkeypatch, login):
     credentials.assert_not_awaited()
 
 
-@pytest.mark.parametrize(
-    ("command", "parameter"), [(moderation.permit, "a b"), (viewers.regular_command, "add @主播")]
-)
+@pytest.mark.parametrize(("command", "parameter"), [(moderation.permit, "a b"), (viewers.regular_command, "add @主播")])
 def test_chat_reports_invalid_login_as_not_found(monkeypatch, command, parameter):
     lookup = Mock()
     monkeypatch.setattr(commands, "may_manage", AsyncMock(return_value=True))
