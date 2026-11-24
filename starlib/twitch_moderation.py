@@ -238,6 +238,8 @@ def detect_blocked_word(text: str, words: Sequence[str]) -> bool:
     """萬用字元兩側的文字只需依序出現，不限制中間字元。"""
     folded = text.casefold()
     for pattern in _blocked_patterns(tuple(words)):
+        if not pattern:
+            continue
         start = 0
         for part in pattern:
             index = folded.find(part, start)
@@ -385,6 +387,8 @@ def validate_filter(kind: str, values: FilterValues) -> FilterValues:
             words = params.get("words")
             if not isinstance(words, list) or not all(isinstance(word, str) for word in words):
                 raise InvalidField("params", "禁字必須是文字清單")
+            if any(word.strip() and not word.replace("*", "").strip() for word in words):
+                raise InvalidField("params", "每個禁字至少需要一個非萬用字元")
             validated = {"words": list(dict.fromkeys(word.strip() for word in words if word.strip()))}
         case _:
             validated = {}
