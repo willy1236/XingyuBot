@@ -304,7 +304,7 @@ COMMIT;
 
 **風險 / 實作注意**：判定函式在每則訊息都會跑，避免對每個禁字各建 regex；可以在設定變更時預先編譯一次。
 
-**進度**：實作完成。設定共用驗證與寫入交易 `dd227f7a`、設定 API `afe18eb7`、七種判定及多規則執法 `44cac021`、前端 `3d80dc3`。沿用 JSON `params`，無需 ALTER。門檻為整數：數量與長度 1–500、比例 1–100%、跨訊息時間 1–300 秒、則數 2–100。後端 60 項 pytest、Python 編譯與 Ruff、前端 9 項 Vitest 與 TypeScript 通過。續做 coordinator 審查與 Twitch 實機確認表情標籤、最重處罰、執法告知、放行及跨程序快取失效。
+**進度**：實作完成。設定共用驗證與寫入交易 `dd227f7a`、設定 API `afe18eb7`、七種判定及多規則執法 `44cac021`、前端 `3d80dc3`。沿用 JSON `params`，無需 ALTER。門檻為整數：數量與長度 1–500、比例 1–100%、跨訊息時間 1–300 秒、則數 2–100。後端 60 項 pytest、Python 編譯與 Ruff、前端 9 項 Vitest 與 TypeScript 通過。事後修正：`tests/twitch/test_timers_hooks.py` 的聊天訊息替身補上 `source_room_id`（twitchAPI 4.5.0 的 ChatMessage 一定有此屬性，無 tag 時為 None），修復 C-03 後的 2 項回歸。續做 coordinator 審查與 Twitch 實機確認表情標籤、最重處罰、執法告知、放行及跨程序快取失效。
 
 ### C-04 實況主能自訂處罰階段與犯規次數歸零時間
 
