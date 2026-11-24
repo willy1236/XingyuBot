@@ -97,8 +97,13 @@ def helix(monkeypatch):
         )
     )
     client.auto_refresh_auth = False
-    monkeypatch.setattr(state, "twitch", client, raising=False)
-    monkeypatch.setattr(state, "bot_user_id", BOT, raising=False)
+
+    def install():
+        """start_chat() 跑 run() 時會蓋掉 state.twitch，所以在它之後才換成真的 BotTwitch。"""
+        monkeypatch.setattr(state, "twitch", client, raising=False)
+        monkeypatch.setattr(state, "bot_user_id", BOT, raising=False)
+
+    request.install = install
     return request
 
 
@@ -108,6 +113,7 @@ def helix_response(status, body=None):
 
 def test_解除處罰以_Helix_unban_並回_lifted(helix, handlers, start_chat, channel_id):
     start_chat()
+    helix.install()
     helix.return_value = helix_response(204)
 
     result = call(handlers, "moderation.lift", {"twitch_id": int(channel_id), "user_id": int(ALICE)})
@@ -122,6 +128,7 @@ def test_解除處罰以_Helix_unban_並回_lifted(helix, handlers, start_chat, 
 @pytest.mark.parametrize(("status", "result"), [(400, "not_punished"), (403, "not_mod")])
 def test_Helix_400_視為不在處罰中_403_視為_bot_不是_mod(helix, handlers, start_chat, channel_id, status, result):
     start_chat()
+    helix.install()
     helix.return_value = helix_response(status, {"error": "x", "status": status, "message": "x"})
     assert call(handlers, "moderation.lift", {"twitch_id": int(channel_id), "user_id": int(ALICE)}) == {
         "result": result
@@ -131,6 +138,7 @@ def test_Helix_400_視為不在處罰中_403_視為_bot_不是_mod(helix, handle
 @pytest.mark.parametrize("status", [500, 429])
 def test_其他_Twitch_失敗拋錯讓後台顯示失敗(helix, handlers, start_chat, channel_id, status):
     start_chat()
+    helix.install()
     helix.return_value = helix_response(status, {"error": "x", "status": status, "message": "x"})
     assert "moderation.lift" in handlers
     with pytest.raises(Exception):  # noqa: B017 失敗型別由實作決定，只要求不回成功
