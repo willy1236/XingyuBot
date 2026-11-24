@@ -174,7 +174,7 @@ class TestEntry:
         params.setdefault("origin", FRONTEND)
         return site.get("/to/dashboard-twitch-enable", params=params)
 
-    def test_redirects_to_twitch_with_full_scopes(self, site, spy, repo):
+    def test_redirects_to_twitch_forcing_verify(self, site, spy, repo):
         _own_channel_session(site, repo)
 
         response = self._enter(site)
@@ -183,7 +183,6 @@ class TestEntry:
         location = urlparse(response.headers["location"])
         assert f"{location.scheme}://{location.netloc}{location.path}" == "https://id.twitch.tv/oauth2/authorize"
         query = parse_qs(location.query)
-        assert query["scope"] == [" ".join(channel_activation.ENABLE_SCOPES)]
         assert query["force_verify"] == ["true"]
 
     def test_cookie_carries_purpose_and_channel(self, site, spy, repo):
@@ -285,7 +284,6 @@ class TestEnable:
         response = _callback(site, code="c")
 
         assert response.headers["location"] == CHANNEL_URL
-        assert spy.scopes == [channel_activation.ENABLE_SCOPES]
         assert spy.saved_tokens == [CHANNEL]
         channel = _channel(repo)
         assert (channel.state, channel.login, channel.display_name) == ("enabled", "streamer", "Streamer")

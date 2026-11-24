@@ -56,7 +56,7 @@ flowchart LR
 | 6 | C-05 | 實作完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
 | 7 | C-06 | 實作完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 實作完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
-| 9 | C-08 | 未完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | |
+| 9 | C-08 | 進行中 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | 啟用流程已加 `channel:manage:broadcast` |
 | 10 | C-09 | 未完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
 | 11 | C-10 | 未完成 | bot 不是 mod 時，後台列出暫停的聊天室管理功能 | C-06、C-07 | — | |
 | 12 | C-11 | 未完成 | 刪除所有資料時一併清除聊天室管理資料 | C-01、C-02 | — | |
@@ -448,7 +448,7 @@ COMMIT;
 
 **依賴**：C-00（內建指令名稱與既有同名指令改名、`may_manage`、`AuditTarget.stream_info`）
 
-**進度**：未完成
+**進度**：進行中。已完成：`STREAM_INFO_SCOPES`／`has_stream_info_scope` 與啟用流程兩處加權限（commit 1）；`test_channel_activation.py` 兩處比對完整 scope 的斷言移到 `test_channel_activation_stream_info.py`（同一行為，不重複）。無需 ALTER。續做：`speech._check` 改公開 `check`（structure commit），再寫 `starServer/twitch_bot/stream_info.py`（`title`／`game`／`uptime`）並在 `twitch_chatbot.py` 註冊、移除 `commands.modify_channel_information` 空殼。
 
 ### C-09 實況主與 mod 能在後台查看與修改實況資訊
 

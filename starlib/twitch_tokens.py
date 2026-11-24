@@ -37,6 +37,10 @@ ENABLE_SCOPES = [
     "user:read:blocked_users",
 ]
 
+#: 聊天室 `!title`、`!game` 修改實況資訊要的權限。獨立於 `ENABLE_SCOPES`：既有頻道沒有重新授權也不算 scope_missing，
+#: 只是不能改標題與分類；新啟用的頻道在啟用時一併授權
+STREAM_INFO_SCOPES = ["channel:manage:broadcast"]
+
 
 @dataclass(frozen=True, slots=True)
 class TokenInvalid:
@@ -53,6 +57,12 @@ def missing_scopes(token: OAuthToken | None) -> list[str]:
     """token 缺少的 `ENABLE_SCOPES`，依 `ENABLE_SCOPES` 的順序；沒有 token 時是全部。"""
     granted = set(token.scope or ()) if token is not None else set()
     return [scope for scope in ENABLE_SCOPES if scope not in granted]
+
+
+def has_stream_info_scope(token: OAuthToken | None) -> bool:
+    """token 是否已授權 `STREAM_INFO_SCOPES`；沒有 token 時是 False。"""
+    granted = set(token.scope or ()) if token is not None else set()
+    return set(STREAM_INFO_SCOPES) <= granted
 
 
 def token_state(token: OAuthToken | None) -> TokenState:
