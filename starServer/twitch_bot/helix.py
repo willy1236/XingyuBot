@@ -7,6 +7,14 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, AuthType, TwitchAPIException, UnauthorizedException
 
 
+class TwitchStatusError(TwitchAPIException):
+    """解除處罰（DELETE moderation/bans）收到非 2xx；SDK 的 `unban_user` 會把 429、403 當成回傳 False，這裡改成拋出並帶狀態碼。"""
+
+    def __init__(self, method: str, endpoint: str, status: int):
+        super().__init__(f"Twitch {method} {endpoint} failed: HTTP {status}")
+        self.status = status
+
+
 class BotTwitch(Twitch):
     async def _check_request_return(
         self,
@@ -21,6 +29,10 @@ class BotTwitch(Twitch):
     ) -> ClientResponse:
         endpoint = "/".join(urlsplit(url).path.rsplit("/", 2)[-2:])
         delete = method == "DELETE" and endpoint == "moderation/chat"
+        if method == "DELETE" and endpoint == "moderation/bans" and not 200 <= response.status < 300:
+            # 401 的刷新與 503 的重試仍交給 SDK。
+            if response.status not in (401, 503):
+                raise TwitchStatusError(method, endpoint, response.status)
         enforcing = delete or (method == "POST" and endpoint == "moderation/bans")
         if enforcing and not 200 <= response.status < 300:
             # delete_chat_message 會把 403 轉為 ForbiddenError；其餘已知狀態交由 SDK 處理。

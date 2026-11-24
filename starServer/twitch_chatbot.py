@@ -143,6 +143,7 @@ async def run():
     chat.register_command("list_cmd", commands.list_chat_command)
     chat.register_command("regular", viewers.regular_command)
     chat.register_command("permit", moderation.permit)
+    moderation.register(asyncio.get_running_loop())
     # TODO: modify_channel_information
 
     await viewers.load_regulars()

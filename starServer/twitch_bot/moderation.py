@@ -6,6 +6,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 from weakref import WeakValueDictionary
 
 from aiohttp import ClientError
@@ -16,10 +17,11 @@ from twitchAPI.type import TwitchAPIException
 
 from starlib import twitch_moderation
 from starlib.database import TwitchEnforcementLog, sqldb
-from starlib.messaging import cache_invalidation
+from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_moderation import FilterConfig, ModerationConfig, Stage
 from starlib.twitch_speech_check import substitute
 from starServer.twitch_bot import state
+from starServer.twitch_bot.helix import TwitchStatusError
 from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
@@ -96,6 +98,15 @@ async def _on_invalidated(key: str | None) -> None:
             runtime.invalidate_config()
 
 
+def register(loop: asyncio.AbstractEventLoop) -> None:
+    """註冊聊天室管理的 RPC，handler 在 `loop` 上執行。
+
+    啟動設定時先綁到當下的 loop；Chat 的 READY（含重啟後換 loop）再綁到 Chat 的 loop，之後狀態只由 Chat loop 存取。
+    """
+    rpc.handle("moderation.lift", lift, loop)
+    rpc.handle("moderation.clear_strikes", clear_strikes, loop)
+
+
 async def on_ready(_: EventData) -> None:
     global _loop
     loop = asyncio.get_running_loop()
@@ -105,6 +116,7 @@ async def on_ready(_: EventData) -> None:
             runtime.enforcement_locks.clear()
         _loop = loop
     cache_invalidation.on_invalidate("twitch_moderation", _on_invalidated, loop)
+    register(loop)
     await _on_invalidated(None)
 
 
@@ -327,3 +339,26 @@ async def permit(cmd: ChatCommand) -> None:
     seconds = config["settings"]["permit_seconds"]
     runtime.permits[int(user.id)] = _now() + seconds
     await cmd.reply(f"已放行 {user.display_name}，{seconds} 秒內可以分享連結")
+
+
+async def lift(payload: dict[str, Any]) -> dict[str, str]:
+    """RPC `moderation.lift`：解除觀眾在頻道的 timeout 或 ban。Twitch 回 400 是不在處罰中、403 是 bot 不是 mod，其他失敗拋錯。"""
+    try:
+        await state.twitch.unban_user(str(int(payload["twitch_id"])), state.bot_user_id, str(int(payload["user_id"])))
+    except TwitchStatusError as exc:
+        match exc.status:
+            case 400:
+                return {"result": "not_punished"}
+            case 403:
+                return {"result": "not_mod"}
+        raise
+    return {"result": "lifted"}
+
+
+async def clear_strikes(payload: dict[str, Any]) -> dict[str, Any]:
+    """RPC `moderation.clear_strikes`：清除觀眾在頻道所有過濾器的犯規次數。"""
+    runtime = _channels.get(int(payload["twitch_id"]))
+    if runtime is not None:
+        user_id = int(payload["user_id"])
+        runtime.strikes = {key: value for key, value in runtime.strikes.items() if key[0] != user_id}
+    return {}
