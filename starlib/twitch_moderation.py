@@ -44,6 +44,7 @@ PERMIT_SECONDS = 60
 STAGE_COUNT_RANGE = (1, 5)
 TIMEOUT_SECONDS_RANGE = (1, 14 * 24 * 60 * 60)
 STRIKE_RESET_MINUTES_RANGE = (1, 24 * 60)
+RAID_PAUSE_SECONDS_RANGE = (0, 10 * 60)
 PERMIT_SECONDS_RANGE = (10, 10 * 60)
 
 
@@ -73,14 +74,21 @@ class FilterConfig(_FilterSnapshot):
     updated_at: str | None
 
 
-class SettingsValues(TypedDict):
+class _PenaltyValues(TypedDict):
     stages: list[Stage]
     strike_reset_minutes: int
     permit_seconds: int
 
 
-class Settings(SettingsValues):
+class SettingsValues(_PenaltyValues):
+    raid_pause_seconds: NotRequired[int]
+
+
+class _SettingsSnapshot(_PenaltyValues):
     raid_pause_seconds: int
+
+
+class Settings(_SettingsSnapshot):
     updated_at: str | None
 
 
@@ -358,6 +366,8 @@ def validate_settings(values: SettingsValues) -> None:
         values["strike_reset_minutes"], STRIKE_RESET_MINUTES_RANGE, "strike_reset_minutes", "犯規次數歸零分鐘數"
     )
     _validate_range(values["permit_seconds"], PERMIT_SECONDS_RANGE, "permit_seconds", "放行秒數")
+    if "raid_pause_seconds" in values:
+        _validate_range(values["raid_pause_seconds"], RAID_PAUSE_SECONDS_RANGE, "raid_pause_seconds", "Raid 後暫停秒數")
 
 
 def validate_filter(kind: str, values: FilterValues) -> FilterValues:
@@ -421,12 +431,15 @@ def comparable(values: FilterValues | _FilterSnapshot) -> dict[str, str | None]:
     return result
 
 
-def comparable_settings(values: SettingsValues) -> dict[str, str | None]:
-    return {
+def comparable_settings(values: SettingsValues | _SettingsSnapshot) -> dict[str, str | None]:
+    comparable: dict[str, str | None] = {
         "stages": json.dumps(values["stages"], sort_keys=True),
         "strike_reset_minutes": str(values["strike_reset_minutes"]),
         "permit_seconds": str(values["permit_seconds"]),
     }
+    if "raid_pause_seconds" in values:
+        comparable["raid_pause_seconds"] = str(values["raid_pause_seconds"])
+    return comparable
 
 
 def _stages(rows: list[dict[str, Any]]) -> list[Stage]:
@@ -441,12 +454,13 @@ def _filter_config(row: TwitchModerationFilter | None, kind: str) -> FilterConfi
     }
 
 
-def _settings_values(row: TwitchModerationSetting | None) -> SettingsValues:
+def _settings_values(row: TwitchModerationSetting | None) -> _SettingsSnapshot:
     return {
         "stages": _stages(row.stages)
         if row is not None
         else [{"action": "delete", "duration": None}, {"action": "timeout", "duration": 600}],
         "strike_reset_minutes": row.strike_reset_minutes if row is not None else STRIKE_RESET_MINUTES,
+        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
         "permit_seconds": row.permit_seconds if row is not None else PERMIT_SECONDS,
     }
 
@@ -454,7 +468,6 @@ def _settings_values(row: TwitchModerationSetting | None) -> SettingsValues:
 def _settings_config(row: TwitchModerationSetting | None) -> Settings:
     return {
         **_settings_values(row),
-        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
         "updated_at": row.updated_at.isoformat() if row is not None else None,
     }
 
@@ -529,15 +542,16 @@ def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, v
         row = session.get(TwitchModerationSetting, twitch_id, populate_existing=True, with_for_update=True)
         before = _settings_values(row)
         verify(comparable_settings(before))
-        if before == values:
+        after: _SettingsSnapshot = {**before, **values}
+        if before == after:
             result = _settings_config(row)
             session.rollback()
             return result
         created = row is None
         if row is None:
-            row = TwitchModerationSetting(twitch_id=twitch_id, raid_pause_seconds=RAID_PAUSE_SECONDS, **values)
+            row = TwitchModerationSetting(twitch_id=twitch_id, **after)
         else:
-            row.sqlmodel_update(dict(values))
+            row.sqlmodel_update(dict(after))
         row.updated_at = nowtz()
         session.add(row)
         session.flush()
@@ -549,7 +563,7 @@ def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, v
             "settings",
             "create" if created else "update",
             dict(before),
-            dict(values),
+            dict(after),
         )
         session.refresh(row, attribute_names=["updated_at"])
         result = _settings_config(row)

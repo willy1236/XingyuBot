@@ -56,13 +56,17 @@ class SettingsInput(BaseModel):
     stages: list[StageInput]
     strike_reset_minutes: StrictInt
     permit_seconds: StrictInt
+    raid_pause_seconds: StrictInt = twitch_moderation.RAID_PAUSE_SECONDS
 
     def fields(self) -> SettingsValues:
-        return {
+        values: SettingsValues = {
             "stages": [stage.fields() for stage in self.stages],
             "strike_reset_minutes": self.strike_reset_minutes,
             "permit_seconds": self.permit_seconds,
         }
+        if "raid_pause_seconds" in self.model_fields_set:
+            values["raid_pause_seconds"] = self.raid_pause_seconds
+        return values
 
 
 class SettingsPutBody(BaseModel):

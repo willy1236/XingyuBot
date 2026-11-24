@@ -1,4 +1,4 @@
-"""聊天室過濾、執法與暫時放行。執行期狀態只由 Chat loop 存取。"""
+"""聊天室過濾、執法、Raid 暫停與暫時放行。執行期狀態只由 Chat loop 存取。"""
 
 import asyncio
 import logging
@@ -24,6 +24,7 @@ from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
 _now: Callable[[], float] = time.monotonic
+_RAID_PAUSED_FILTERS = frozenset({"emote", "repetition", "duplicate", "caps"})
 
 
 @dataclass(slots=True)
@@ -63,6 +64,7 @@ class _Channel:
     notices: dict[str, float] = field(default_factory=dict)
     recent_messages: _RecentMessages = field(default_factory=_RecentMessages)
     next_prune: float = 0.0
+    pause_until: float = 0.0
 
     def invalidate_config(self) -> None:
         self.config_generation += 1
@@ -128,6 +130,28 @@ def _enabled(twitch_id: int) -> bool:
     return row is not None and row.state == "enabled"
 
 
+async def _start_raid_pause(twitch_id: int, received_at: float) -> None:
+    if not _enabled(twitch_id):
+        return
+    runtime = _channels.get(twitch_id)
+    if runtime is None:
+        runtime = _channels[twitch_id] = _Channel()
+    config = await _config(twitch_id, runtime)
+    if _channels.get(twitch_id) is runtime:
+        runtime.pause_until = received_at + config["settings"]["raid_pause_seconds"]
+
+
+async def on_raid(twitch_id: int) -> None:
+    """EventSub webhook 與 Chat 使用不同的 loop，暫停狀態由 Chat loop 更新。"""
+    received_at = _now()
+    loop = _loop
+    if loop is None or not loop.is_running() or loop is asyncio.get_running_loop():
+        await _start_raid_pause(twitch_id, received_at)
+        return
+    pending = asyncio.run_coroutine_threadsafe(_start_raid_pause(twitch_id, received_at), loop)
+    await asyncio.wrap_future(pending)
+
+
 def _write_log(entry: TwitchEnforcementLog) -> None:
     try:
         twitch_moderation.record_enforcement(entry)
@@ -167,6 +191,8 @@ def _select_violation(
             else:
                 runtime.recent_messages.clear()
         if not rule["enabled"] or level >= PERMISSION_LEVELS[rule["exempt_level"]]:
+            continue
+        if now < runtime.pause_until and kind in _RAID_PAUSED_FILTERS:
             continue
         if kind == "link" and now < runtime.permits.get(user_id, now):
             continue

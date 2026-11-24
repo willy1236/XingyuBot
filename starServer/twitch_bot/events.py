@@ -25,7 +25,7 @@ from starlib.messaging.events.twitch_activity import (
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
 from starlib.twitch_event_responses import EventResponse
-from starServer.twitch_bot import speech, state, timers
+from starServer.twitch_bot import moderation, speech, state, timers
 
 log = logging.getLogger(__name__)
 
@@ -259,9 +259,15 @@ async def on_channel_raid(event: eventsub.ChannelRaidEvent):
         event.event.to_broadcaster_user_name,
     )
 
+    twitch_id = int(event.event.to_broadcaster_user_id)
+    try:
+        await moderation.on_raid(twitch_id)
+    except Exception:
+        log.exception("%s 的 Raid 暫停過濾失敗", twitch_id)
+
     await _respond(
         "raid",
-        int(event.event.to_broadcaster_user_id),
+        twitch_id,
         event.event.to_broadcaster_user_login,
         event.event.to_broadcaster_user_name,
         user=event.event.from_broadcaster_user_name,
