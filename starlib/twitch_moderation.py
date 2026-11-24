@@ -5,7 +5,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 from unicodedata import category
 from urllib.parse import urlsplit
 
@@ -41,6 +41,10 @@ NOTICE_MAX_LENGTH = 500
 STRIKE_RESET_MINUTES = 60
 RAID_PAUSE_SECONDS = 120
 PERMIT_SECONDS = 60
+STAGE_COUNT_RANGE = (1, 5)
+TIMEOUT_SECONDS_RANGE = (1, 14 * 24 * 60 * 60)
+STRIKE_RESET_MINUTES_RANGE = (1, 24 * 60)
+PERMIT_SECONDS_RANGE = (10, 10 * 60)
 
 
 class Stage(TypedDict):
@@ -48,7 +52,7 @@ class Stage(TypedDict):
     duration: int | None
 
 
-class FilterValues(TypedDict):
+class _FilterFields(TypedDict):
     enabled: bool
     exempt_level: str
     params: dict[str, Any]
@@ -56,17 +60,27 @@ class FilterValues(TypedDict):
     silent: bool
 
 
-class FilterConfig(FilterValues):
-    kind: str
+class FilterValues(_FilterFields):
+    stages: NotRequired[list[Stage] | None]
+
+
+class _FilterSnapshot(_FilterFields):
     stages: list[Stage] | None
+
+
+class FilterConfig(_FilterSnapshot):
+    kind: str
     updated_at: str | None
 
 
-class Settings(TypedDict):
+class SettingsValues(TypedDict):
     stages: list[Stage]
     strike_reset_minutes: int
-    raid_pause_seconds: int
     permit_seconds: int
+
+
+class Settings(SettingsValues):
+    raid_pause_seconds: int
     updated_at: str | None
 
 
@@ -319,10 +333,39 @@ def _validate_whitelist(raw: object) -> list[str]:
     return list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
 
 
+def _validate_range(value: int, bounds: tuple[int, int], field: str, label: str) -> None:
+    lower, upper = bounds
+    if type(value) is not int or not lower <= value <= upper:
+        raise InvalidField(field, f"{label}必須是 {lower} 到 {upper} 的整數")
+
+
+def _validate_stages(stages: list[Stage]) -> None:
+    _validate_range(len(stages), STAGE_COUNT_RANGE, "stages", "處罰段數")
+    for stage in stages:
+        action = stage["action"]
+        duration = stage["duration"]
+        if action == "timeout":
+            if duration is None:
+                raise InvalidField("stages", "請填寫 timeout 秒數")
+            _validate_range(duration, TIMEOUT_SECONDS_RANGE, "stages", "timeout 秒數")
+        elif action not in ("delete", "ban") or duration is not None:
+            raise InvalidField("stages", "請選擇有效的處罰動作，秒數只適用於 timeout")
+
+
+def validate_settings(values: SettingsValues) -> None:
+    _validate_stages(values["stages"])
+    _validate_range(
+        values["strike_reset_minutes"], STRIKE_RESET_MINUTES_RANGE, "strike_reset_minutes", "犯規次數歸零分鐘數"
+    )
+    _validate_range(values["permit_seconds"], PERMIT_SECONDS_RANGE, "permit_seconds", "放行秒數")
+
+
 def validate_filter(kind: str, values: FilterValues) -> FilterValues:
     if kind not in FILTER_KINDS:
         raise InvalidField("kind", "未知的過濾器")
     _validate_common(values)
+    if (stages := values.get("stages")) is not None:
+        _validate_stages(stages)
     params = values["params"]
     validated: dict[str, Any]
     match kind:
@@ -344,12 +387,13 @@ def validate_filter(kind: str, values: FilterValues) -> FilterValues:
     return {**values, "params": validated}
 
 
-def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
+def _snapshot(row: TwitchModerationFilter | None, kind: str) -> _FilterSnapshot:
     if row is None:
         return {
             "enabled": False,
             "exempt_level": "vip",
             "params": _default_params(kind),
+            "stages": None,
             "notice": None,
             "silent": False,
         }
@@ -357,18 +401,31 @@ def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
         "enabled": row.enabled,
         "exempt_level": row.exempt_level,
         "params": {**_default_params(kind), **row.params},
+        "stages": _stages(row.stages) if row.stages is not None else None,
         "notice": row.notice,
         "silent": row.silent,
     }
 
 
-def comparable(values: FilterValues) -> dict[str, str | None]:
-    return {
+def comparable(values: FilterValues | _FilterSnapshot) -> dict[str, str | None]:
+    result = {
         "enabled": str(values["enabled"]).lower(),
         "exempt_level": values["exempt_level"],
         "params": json.dumps(values["params"], sort_keys=True, ensure_ascii=False),
         "notice": values["notice"],
         "silent": str(values["silent"]).lower(),
+    }
+    if "stages" in values:
+        stages = values["stages"]
+        result["stages"] = json.dumps(stages, sort_keys=True) if stages is not None else None
+    return result
+
+
+def comparable_settings(values: SettingsValues) -> dict[str, str | None]:
+    return {
+        "stages": json.dumps(values["stages"], sort_keys=True),
+        "strike_reset_minutes": str(values["strike_reset_minutes"]),
+        "permit_seconds": str(values["permit_seconds"]),
     }
 
 
@@ -380,19 +437,24 @@ def _filter_config(row: TwitchModerationFilter | None, kind: str) -> FilterConfi
     return {
         **_snapshot(row, kind),
         "kind": kind,
-        "stages": _stages(row.stages) if row is not None and row.stages is not None else None,
         "updated_at": row.updated_at.isoformat() if row is not None else None,
     }
 
 
-def _settings_config(row: TwitchModerationSetting | None) -> Settings:
+def _settings_values(row: TwitchModerationSetting | None) -> SettingsValues:
     return {
         "stages": _stages(row.stages)
         if row is not None
         else [{"action": "delete", "duration": None}, {"action": "timeout", "duration": 600}],
         "strike_reset_minutes": row.strike_reset_minutes if row is not None else STRIKE_RESET_MINUTES,
-        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
         "permit_seconds": row.permit_seconds if row is not None else PERMIT_SECONDS,
+    }
+
+
+def _settings_config(row: TwitchModerationSetting | None) -> Settings:
+    return {
+        **_settings_values(row),
+        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
         "updated_at": row.updated_at.isoformat() if row is not None else None,
     }
 
@@ -406,7 +468,10 @@ def get_config(twitch_id: int) -> ModerationConfig:
         .execution_options(populate_existing=True)
     )
     by_kind = {item.kind: item for item in filters}
-    return {"settings": _settings_config(row), "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS]}
+    return {
+        "settings": _settings_config(row),
+        "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS],
+    }
 
 
 def _lock_channel_settings(session: Session, twitch_id: int) -> None:
@@ -424,6 +489,7 @@ def update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterVa
         row = session.get(TwitchModerationFilter, (twitch_id, kind), populate_existing=True, with_for_update=True)
         before = _snapshot(row, kind)
         verify(comparable(before))
+        values.setdefault("stages", before["stages"])
         if before == values:
             result = _filter_config(row, kind)
             session.rollback()
@@ -447,6 +513,45 @@ def update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterVa
             dict(values),
         )
         result = _filter_config(row, kind)
+        sqldb.commit()
+    except BaseException:
+        session.rollback()
+        raise
+    cache_invalidation.invalidate("twitch_moderation", str(twitch_id))
+    return result
+
+
+def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, verify: Verify) -> Settings:
+    validate_settings(values)
+    session = sqldb.session
+    try:
+        _lock_channel_settings(session, twitch_id)
+        row = session.get(TwitchModerationSetting, twitch_id, populate_existing=True, with_for_update=True)
+        before = _settings_values(row)
+        verify(comparable_settings(before))
+        if before == values:
+            result = _settings_config(row)
+            session.rollback()
+            return result
+        created = row is None
+        if row is None:
+            row = TwitchModerationSetting(twitch_id=twitch_id, raid_pause_seconds=RAID_PAUSE_SECONDS, **values)
+        else:
+            row.sqlmodel_update(dict(values))
+        row.updated_at = nowtz()
+        session.add(row)
+        session.flush()
+        record_change(
+            twitch_id,
+            actor,
+            "dashboard",
+            "moderation",
+            "settings",
+            "create" if created else "update",
+            dict(before),
+            dict(values),
+        )
+        result = _settings_config(row)
         sqldb.commit()
     except BaseException:
         session.rollback()
