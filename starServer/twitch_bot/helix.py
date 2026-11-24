@@ -1,14 +1,19 @@
 """Twitch bot 的 Helix client，補齊 twitchAPI 的執法錯誤判定。"""
 
+from collections.abc import AsyncGenerator
 from urllib.parse import urlsplit
 
 from aiohttp import ClientResponse, ClientResponseError, ClientSession
+from twitchAPI.object.api import BlockedTerm
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, AuthType, TwitchAPIException, UnauthorizedException
 
 
 class TwitchStatusError(TwitchAPIException):
-    """解除處罰（DELETE moderation/bans）收到非 2xx；SDK 的 `unban_user` 會把 429、403 當成回傳 False，這裡改成拋出並帶狀態碼。"""
+    """解除處罰（DELETE moderation/bans）與 Blocked Terms（moderation/blocked_terms）收到非 2xx，改成拋出並帶狀態碼。
+
+    SDK 的 `unban_user` 會把 429、403 當成回傳 False；Blocked Terms 的 403 則只會丟 KeyError。
+    """
 
     def __init__(self, method: str, endpoint: str, status: int):
         super().__init__(f"Twitch {method} {endpoint} failed: HTTP {status}")
@@ -16,6 +21,19 @@ class TwitchStatusError(TwitchAPIException):
 
 
 class BotTwitch(Twitch):
+    async def get_blocked_terms(
+        self, broadcaster_id: str, moderator_id: str, after: str | None = None, first: int | None = None
+    ) -> AsyncGenerator[BlockedTerm]:
+        """同 SDK，但 scope 只要 read 或 manage 其一：Helix 兩者都接受，SDK 4.5.0 硬寫要 read。"""
+        if first is not None and not 1 <= first <= 100:
+            raise ValueError("first must be between 1 and 100")
+        param = {"broadcaster_id": broadcaster_id, "moderator_id": moderator_id, "first": first, "after": after}
+        scopes = [[AuthScope.MODERATOR_READ_BLOCKED_TERMS, AuthScope.MODERATOR_MANAGE_BLOCKED_TERMS]]
+        async for term in self._build_generator(
+            "GET", "moderation/blocked_terms", param, AuthType.USER, scopes, BlockedTerm
+        ):
+            yield term
+
     async def _check_request_return(
         self,
         session: ClientSession,
@@ -29,6 +47,9 @@ class BotTwitch(Twitch):
     ) -> ClientResponse:
         endpoint = "/".join(urlsplit(url).path.rsplit("/", 2)[-2:])
         delete = method == "DELETE" and endpoint == "moderation/chat"
+        if endpoint == "moderation/blocked_terms" and not 200 <= response.status < 300:
+            if response.status not in (401, 503):
+                raise TwitchStatusError(method, endpoint, response.status)
         if method == "DELETE" and endpoint == "moderation/bans" and not 200 <= response.status < 300:
             # 401 的刷新與 503 的重試仍交給 SDK。
             if response.status not in (401, 503):
