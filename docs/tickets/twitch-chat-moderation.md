@@ -53,7 +53,7 @@ flowchart LR
 | 3 | C-02 | 實作完成 | 實況主能開啟連結過濾，bot 處罰違規並在聊天室告知 | C-01 | — | 骨架切片 |
 | 4 | C-03 | 實作完成 | 實況主能開啟其餘 7 種過濾器 | C-02 | — | |
 | 5 | C-04 | 實作完成 | 實況主能自訂處罰階段與犯規次數歸零時間 | C-02 | — | 與 C-03 改同一份設定與頁面 |
-| 6 | C-05 | 實作中 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
+| 6 | C-05 | 實作完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
 | 7 | C-06 | 未完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 未完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 未完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | |
@@ -352,7 +352,7 @@ COMMIT;
 
 **依賴**：C-03（被暫停的過濾器）、C-04（同一個設定端點與區塊）
 
-**進度**：實作中。後端隨 `feat(twitch): 被 Raid 後暫停洗版類過濾` 提交。原有 EventSub handler 把暫停狀態交由 Chat event loop 更新，設定沿用既有 PUT、衝突檢查與修改紀錄。舊版請求省略欄位時保留已存秒數。沿用 `twitch_moderation_setting.raid_pause_seconds`，無需 ALTER。續做前端 `ModerationSettingsCard` 欄位提交與驗證紀錄。
+**進度**：實作完成。後端 Raid 暫停、設定 API 和修改紀錄 `75b0d0fd`，前端處罰設定的「Raid 後暫停」欄位 `a60cf1a`。原有 EventSub handler 把暫停狀態交由 Chat event loop 更新。舊版請求省略欄位時保留已存秒數。沿用 `twitch_moderation_setting.raid_pause_seconds`，無需 ALTER。後端 76 項 pytest、2 項補充 API 與跨 event loop 驗證、Python 編譯、Ruff lint、前端 12 項 Vitest 與 TypeScript 通過。續做 coordinator 審查與 Twitch 實機確認 Raid 到達、現有 Raid 回應與暫停期間的實際執法。
 
 ### C-06 實況主與 mod 能查看執法紀錄並處理誤判
 
