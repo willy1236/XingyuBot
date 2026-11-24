@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from twitchAPI.chat import Chat, ChatEvent
-from twitchAPI.type import TwitchAPIException
+from twitchAPI.type import ForbiddenError, TwitchAPIException
 
 from starlib import twitch_audit, twitch_commands, twitch_regulars
 from starlib.database import TwitchBotJoinChannel
@@ -23,6 +23,7 @@ from starServer.dashboard import channels, twitch_control
 from starServer.twitch_bot import channels as chat_channels
 from starServer.twitch_bot import commands, state, viewers
 from tests.helpers.dashboard_auth import FRONTEND, make_app, make_twitch_session
+from tests.twitch.test_channels import eventsub  # noqa: F401 (fixture)
 
 ALICE = "2000000961"
 MOD = "2000000962"
@@ -182,6 +183,13 @@ class ChatHarness:
         self.notices.append((getattr(room, "name", room), text))
 
     def send(self, text=LINK, *, uid=ALICE, login="alice", mod=False, vip=False, subscriber=False, emotes=None):
+        return asyncio.run(
+            self.send_async(text, uid=uid, login=login, mod=mod, vip=vip, subscriber=subscriber, emotes=emotes)
+        )
+
+    async def send_async(
+        self, text=LINK, *, uid=ALICE, login="alice", mod=False, vip=False, subscriber=False, emotes=None
+    ):
         msg = SimpleNamespace(
             id=uuid4().hex,
             text=text,
@@ -193,7 +201,7 @@ class ChatHarness:
             ),
             reply=AsyncMock(),
         )
-        asyncio.run(self.events[ChatEvent.MESSAGE](msg))
+        await self.events[ChatEvent.MESSAGE](msg)
         return msg
 
     def invoke(self, command, parameter):
@@ -446,3 +454,85 @@ def test_Twitch_執法失敗會記錄失敗且下一次仍只刪除(configure, s
     assert chat.timeouts == []
     assert len(chat.notices) == 1
     assert [(row["status"], row["strike"]) for row in enforcement(repo, channel_id)] == [("failed", 1), ("ok", 1)]
+
+
+def test_bot失去mod時跳過處罰與紀錄_重新取得mod後恢復執法(
+    configure, start_chat, eventsub, repo, channel_id, monkeypatch
+):
+    configure()
+    chat = start_chat()
+    is_mod = AsyncMock(return_value=False)
+    monkeypatch.setattr(chat_channels, "bot_is_mod", is_mod)
+
+    async def scenario():
+        await chat_channels.reconcile_subscriptions(int(channel_id))
+        is_mod.assert_awaited_with(int(channel_id))
+        await chat.send_async()
+        assert chat.deletions == chat.timeouts == chat.notices == []
+        assert enforcement(repo, channel_id) == []
+
+        is_mod.return_value = True
+        await chat_channels.reconcile_subscriptions(int(channel_id))
+        violation = await chat.send_async("另一則違規連結 xyz.com")
+        assert chat.deletions == [(channel_id, BOT, violation.id)]
+        assert chat.timeouts == []
+        assert len(chat.notices) == 1
+        assert [(row["message"], row["status"]) for row in enforcement(repo, channel_id)] == [(violation.text, "ok")]
+
+    asyncio.run(scenario())
+
+
+def test_執法收到Helix403時不告知不寫紀錄_下一則違規也不送出處罰(configure, start_chat, repo, channel_id, monkeypatch):
+    configure()
+    chat = start_chat()
+    delete = AsyncMock(side_effect=ForbiddenError("bot is not a moderator"))
+    monkeypatch.setattr(state.twitch, "delete_chat_message", delete)
+    monkeypatch.setattr(chat_channels, "bot_is_mod", AsyncMock(return_value=None))
+
+    async def scenario():
+        violation = await chat.send_async()
+        delete.assert_awaited_once_with(channel_id, BOT, violation.id)
+        assert chat.notices == []
+        assert enforcement(repo, channel_id) == []
+
+        await chat.send_async("另一則違規連結 xyz.com")
+        delete.assert_awaited_once()
+        assert chat.timeouts == chat.notices == []
+        assert enforcement(repo, channel_id) == []
+
+    asyncio.run(scenario())
+
+
+def test_恢復bot的mod後60秒檢查會自動恢復執法(configure, start_chat, eventsub, repo, channel_id, monkeypatch):
+    configure()
+    chat = start_chat()
+    twitch_id = int(channel_id)
+    is_mod = AsyncMock(return_value=False)
+    monkeypatch.setattr(chat_channels, "bot_is_mod", is_mod)
+
+    async def scenario():
+        await chat_channels.reconcile_subscriptions(twitch_id)
+        is_mod.assert_awaited_with(twitch_id)
+        await chat.send_async("大家好")
+        await asyncio.sleep(0)
+        is_mod.reset_mock()
+
+        # 沿用 ChatHarness 的執法時鐘，讓下次檢查收到相隔 60 秒的訊息。
+        is_mod.return_value = True
+        chat.now += 60
+        await chat.send_async("又見面了")
+        try:
+            async with asyncio.timeout(1):
+                while not is_mod.await_count:
+                    await asyncio.sleep(0.001)
+                while chat_channels.mod_state(twitch_id) is not True:
+                    await asyncio.sleep(0.001)
+        except TimeoutError:
+            pytest.fail("相隔 60 秒的訊息未觸發成功的 mod 背景重查")
+        is_mod.assert_awaited_with(twitch_id)
+
+        violation = await chat.send_async()
+        assert chat.deletions == [(channel_id, BOT, violation.id)]
+        assert [(row["message"], row["status"]) for row in enforcement(repo, channel_id)] == [(violation.text, "ok")]
+
+    asyncio.run(scenario())
