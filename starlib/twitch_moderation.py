@@ -10,7 +10,7 @@ from unicodedata import category
 from urllib.parse import urlsplit
 
 from sqlalchemy import text
-from sqlmodel import select
+from sqlmodel import Session, select
 
 from starlib._twitch_unicode import EMOJI_PRESENTATION_RANGES, LATIN_RANGES, TEXT_EMOJI_RANGES
 from starlib.database import TwitchEnforcementLog, TwitchModerationFilter, TwitchModerationSetting, sqldb
@@ -385,6 +385,18 @@ def _filter_config(row: TwitchModerationFilter | None, kind: str) -> FilterConfi
     }
 
 
+def _settings_config(row: TwitchModerationSetting | None) -> Settings:
+    return {
+        "stages": _stages(row.stages)
+        if row is not None
+        else [{"action": "delete", "duration": None}, {"action": "timeout", "duration": 600}],
+        "strike_reset_minutes": row.strike_reset_minutes if row is not None else STRIKE_RESET_MINUTES,
+        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
+        "permit_seconds": row.permit_seconds if row is not None else PERMIT_SECONDS,
+        "updated_at": row.updated_at.isoformat() if row is not None else None,
+    }
+
+
 def get_config(twitch_id: int) -> ModerationConfig:
     session = sqldb.session
     row = session.get(TwitchModerationSetting, twitch_id, populate_existing=True)
@@ -394,26 +406,21 @@ def get_config(twitch_id: int) -> ModerationConfig:
         .execution_options(populate_existing=True)
     )
     by_kind = {item.kind: item for item in filters}
-    settings: Settings = {
-        "stages": _stages(row.stages)
-        if row is not None
-        else [{"action": "delete", "duration": None}, {"action": "timeout", "duration": 600}],
-        "strike_reset_minutes": row.strike_reset_minutes if row is not None else STRIKE_RESET_MINUTES,
-        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
-        "permit_seconds": row.permit_seconds if row is not None else PERMIT_SECONDS,
-        "updated_at": row.updated_at.isoformat() if row is not None else None,
-    }
-    return {"settings": settings, "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS]}
+    return {"settings": _settings_config(row), "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS]}
+
+
+def _lock_channel_settings(session: Session, twitch_id: int) -> None:
+    # 鎖也涵蓋尚無設定列的頻道。
+    session.connection().execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"twitch_moderation:{twitch_id}"}
+    )
 
 
 def update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
     values = validate_filter(kind, values)
     session = sqldb.session
     try:
-        # 鎖也涵蓋尚無設定列的頻道。
-        session.connection().execute(
-            text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"twitch_moderation:{twitch_id}"}
-        )
+        _lock_channel_settings(session, twitch_id)
         row = session.get(TwitchModerationFilter, (twitch_id, kind), populate_existing=True, with_for_update=True)
         before = _snapshot(row, kind)
         verify(comparable(before))
