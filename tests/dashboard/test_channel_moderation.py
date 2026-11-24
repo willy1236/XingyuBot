@@ -118,8 +118,8 @@ def test_後台拒絕無效豁免層級且不寫入(host):
     assert filter_fields(host) == original
 
 
-def test_C02_只允許編輯連結過濾(host):
-    response = put_filter(host, {"enabled": True}, kind="caps")
+def test_後台拒絕未知過濾器(host):
+    response = put_filter(host, {"enabled": True}, kind="unknown")
     assert response.status_code == 400, response.text
 
 
@@ -181,10 +181,11 @@ class ChatHarness:
     async def notice(self, room, text):
         self.notices.append((getattr(room, "name", room), text))
 
-    def send(self, text=LINK, *, uid=ALICE, login="alice", mod=False, vip=False, subscriber=False):
+    def send(self, text=LINK, *, uid=ALICE, login="alice", mod=False, vip=False, subscriber=False, emotes=None):
         msg = SimpleNamespace(
             id=uuid4().hex,
             text=text,
+            emotes=emotes,
             source_room_id=None,
             room=self.room,
             user=SimpleNamespace(
