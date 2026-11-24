@@ -13,6 +13,7 @@ from twitchAPI.type import (
     ChatEvent,
     InvalidTokenException,
     MissingScopeException,
+    TwitchAPIException,
 )
 
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
@@ -129,8 +130,12 @@ async def run():
 
     me = await first(twitch.get_users())
     state.bot_user_id = me.id
-    users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
-    channels.rooms.update({int(user.id): user.login for user in users})
+    try:
+        users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
+    except TwitchAPIException as exc:
+        log.warning("啟動時無法批次查詢 Twitch 頻道，交由頻道同步逐一查詢：%s", exc)
+    else:
+        channels.rooms.update({int(user.id): user.login for user in users})
 
     # create chat instance
     chat = state.chat = await Chat(twitch)

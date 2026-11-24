@@ -5,8 +5,9 @@ from unittest.mock import AsyncMock
 import pytest
 from twitchAPI.type import AuthType
 
-from starServer.twitch_bot import speech, state, stream_info
+from starServer.twitch_bot import channels, speech, state, stream_info
 from starServer.twitch_bot.helix import BotTwitch, TwitchStatusError
+from tests.dashboard.test_channel_moderation import BOT, channel_id, host, start_chat  # noqa: F401
 
 
 @pytest.mark.parametrize(
@@ -69,3 +70,17 @@ def test_category_lookup_failure_on_second_page_does_not_patch(monkeypatch):
 
     cmd.reply.assert_awaited_once_with(stream_info._FAILED)
     patch.assert_not_awaited()
+
+
+def test_chat_startup_can_defer_failed_bulk_channel_lookup(start_chat, monkeypatch):
+    async def users(*, user_ids=None):
+        if user_ids:
+            raise TwitchStatusError("GET", "users", 429)
+        yield SimpleNamespace(id=BOT, login="bot")
+
+    monkeypatch.setattr(state.twitch, "get_users", users)
+
+    start_chat()
+
+    assert state.bot_user_id == BOT
+    assert channels.rooms == {}
