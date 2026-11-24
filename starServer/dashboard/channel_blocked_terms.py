@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
 from starlib import twitch_blocked_terms
-from starlib.messaging import rpc
 
 from . import twitch_control
 from .channels import ChannelAccess, require_channel, require_enabled_channel
@@ -29,12 +28,7 @@ class TermBody(BaseModel):
 
 
 async def _call(method: str, twitch_id: int, **payload: object) -> dict:
-    try:
-        result = await twitch_control._call(method, {"twitch_id": twitch_id, **payload})
-    except rpc.RpcHandlerError:
-        raise DashboardError(502, "twitch_failed") from None
-    if isinstance(result, twitch_control.BotOffline):
-        raise DashboardError(503, "bot_offline")
+    result = await twitch_control.call_channel(method, twitch_id, **payload)
     if result.get("error") == "not_mod":
         raise DashboardError(409, "bot_not_mod")
     return result

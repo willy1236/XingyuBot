@@ -15,6 +15,29 @@ PAGE_SIZE = 50
 RETENTION_DAYS = 30
 
 
+def _entry_json(row: TwitchEnforcementLog) -> dict:
+    """後台與營運入口共用的紀錄形狀。"""
+    return {
+        "id": row.id,
+        "at": row.at.isoformat(),
+        "user_id": str(row.user_id),
+        "user_login": row.user_login,
+        "user_name": row.user_name,
+        "filter": row.filter,
+        "strike": row.strike,
+        "action": row.action,
+        "duration": row.duration,
+        "message": row.message,
+        "status": row.status,
+        "lifted_at": None if row.lifted_at is None else row.lifted_at.isoformat(),
+    }
+
+
+def page_json(rows: list[TwitchEnforcementLog]) -> dict:
+    """列表端點的回應：這一頁的紀錄與有沒有下一頁。"""
+    return {"entries": [_entry_json(row) for row in rows], "has_next": len(rows) == PAGE_SIZE}
+
+
 def _cutoff():
     return nowtz() - timedelta(days=RETENTION_DAYS)
 

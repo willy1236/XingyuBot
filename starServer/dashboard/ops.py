@@ -24,7 +24,7 @@ from starlib.database import OAuthToken, TwitchBotJoinChannel
 from starlib.twitch_tokens import missing_scopes, token_state
 from starlib.utils import nowtz
 
-from . import channel_enforcement, twitch_control
+from . import twitch_control
 from .auth import is_bot_owner
 from .channel_activation import _sync_bot
 from .channel_health import channel_health, is_banned
@@ -227,7 +227,7 @@ async def list_enforcement(
         channel = _channel_json(_get_row(twitch_id))
         return {
             "channel": channel,
-            **channel_enforcement.page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset)),
+            **twitch_enforcement.page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset)),
         }
 
     return await run_db(load)

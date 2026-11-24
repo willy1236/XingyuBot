@@ -12,6 +12,7 @@ from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_speech_check import TemplateCheck
 from starlib.twitch_tokens import TokenInvalid
 from starServer.dashboard.db import run_db
+from starServer.dashboard.errors import DashboardError
 
 SERVICE = "twitch"
 
@@ -68,6 +69,17 @@ async def _call(method: str, payload: dict[str, object] | None = None) -> dict |
         return await asyncio.wrap_future(rpc.request(SERVICE, method, payload))
     except rpc.RpcUnavailable:
         return BotOffline()
+
+
+async def call_channel(method: str, twitch_id: int, **payload: object) -> dict:
+    """呼叫 Twitch 頻道操作，將 RPC 失敗和離線轉成後台錯誤。"""
+    try:
+        result = await _call(method, {"twitch_id": twitch_id, **payload})
+    except rpc.RpcHandlerError:
+        raise DashboardError(502, "twitch_failed") from None
+    if isinstance(result, BotOffline):
+        raise DashboardError(503, "bot_offline")
+    return result
 
 
 async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
