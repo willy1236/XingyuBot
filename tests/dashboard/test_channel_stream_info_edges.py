@@ -47,6 +47,15 @@ def test_partial_category_update_accepts_empty_existing_title(host, twitch):
     assert twitch.title == "" and twitch.game_id == MINECRAFT[0]
 
 
+def test_category_update_preserves_unchanged_title_with_whitespace(host, twitch):
+    original_title = f" {OLD_TITLE} "
+    twitch.title = original_title
+
+    assert save(host, title=original_title).is_success
+    assert "title" not in twitch.patches()[0]
+    assert twitch.title == original_title
+
+
 def test_empty_update_request_is_rejected(host, twitch):
     assert host.put("stream-info", json={}).status_code == 400
     assert twitch.requests == []

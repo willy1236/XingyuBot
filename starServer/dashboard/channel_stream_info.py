@@ -102,7 +102,8 @@ async def update_stream_info(
     before = await _channel(twitch_id, headers)
     changes: dict[str, str] = {}
     category_name = before["game"]
-    if body.title is not None and (title := body.title.strip()) != before["title"]:
+    title = body.title.strip() if body.title is not None else None
+    if title is not None and body.title != before["title"] and title != before["title"]:
         if not title:
             raise DashboardError(400, "invalid_request")
         changes["title"] = title
