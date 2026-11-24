@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from weakref import WeakValueDictionary
@@ -16,7 +17,7 @@ from twitchAPI.type import TwitchAPIException
 from starlib import twitch_moderation
 from starlib.database import TwitchEnforcementLog, sqldb
 from starlib.messaging import cache_invalidation
-from starlib.twitch_moderation import ModerationConfig
+from starlib.twitch_moderation import FilterConfig, ModerationConfig, Stage
 from starlib.twitch_speech_check import substitute
 from starServer.twitch_bot import state
 from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
@@ -26,14 +27,41 @@ _now: Callable[[], float] = time.monotonic
 
 
 @dataclass(slots=True)
+class _RecentMessages:
+    messages: deque[tuple[float, tuple[int, str]]] = field(default_factory=deque)
+    counts: dict[tuple[int, str], int] = field(default_factory=dict)
+
+    def clear(self) -> None:
+        self.messages.clear()
+        self.counts.clear()
+
+    def expire(self, cutoff: float) -> None:
+        while self.messages and self.messages[0][0] < cutoff:
+            _, key = self.messages.popleft()
+            count = self.counts[key] - 1
+            if count:
+                self.counts[key] = count
+            else:
+                del self.counts[key]
+
+    def add(self, now: float, user_id: int, text: str) -> int:
+        key = (user_id, text.strip().casefold())
+        self.messages.append((now, key))
+        count = self.counts.get(key, 0) + 1
+        self.counts[key] = count
+        return count
+
+
+@dataclass(slots=True)
 class _Channel:
     config: ModerationConfig | None = None
     config_generation: int = 0
     config_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    enforcement_locks: WeakValueDictionary[tuple[int, str], asyncio.Lock] = field(default_factory=WeakValueDictionary)
+    enforcement_locks: WeakValueDictionary[int, asyncio.Lock] = field(default_factory=WeakValueDictionary)
     strikes: dict[tuple[int, str], tuple[int, float]] = field(default_factory=dict)
     permits: dict[int, float] = field(default_factory=dict)
     notices: dict[str, float] = field(default_factory=dict)
+    recent_messages: _RecentMessages = field(default_factory=_RecentMessages)
     next_prune: float = 0.0
 
     def invalidate_config(self) -> None:
@@ -107,9 +135,63 @@ def _write_log(entry: TwitchEnforcementLog) -> None:
         sqldb.release_session()
 
 
+@dataclass(frozen=True, slots=True)
+class _Violation:
+    rule: FilterConfig
+    strike: int
+    stage: Stage
+
+    @property
+    def severity(self) -> tuple[int, int]:
+        match self.stage["action"]:
+            case "ban":
+                return 2, 0
+            case "timeout":
+                return 1, self.stage["duration"] or 0
+            case _:
+                return 0, 0
+
+
+def _select_violation(
+    msg: ChatMessage, config: ModerationConfig, runtime: _Channel, level: int, user_id: int, now: float
+) -> _Violation | None:
+    settings = config["settings"]
+    strike_window = settings["strike_reset_minutes"] * 60
+    runtime.prune(now, strike_window)
+    best = None
+    for rule in config["filters"]:
+        kind, params = rule["kind"], rule["params"]
+        if kind == "duplicate":
+            if rule["enabled"]:
+                runtime.recent_messages.expire(now - params["window_seconds"])
+            else:
+                runtime.recent_messages.clear()
+        if not rule["enabled"] or level >= PERMISSION_LEVELS[rule["exempt_level"]]:
+            continue
+        if kind == "link" and now < runtime.permits.get(user_id, now):
+            continue
+
+        occurrences = runtime.recent_messages.add(now, user_id, msg.text) if kind == "duplicate" else 0
+        twitch_count = sum(len(positions) for positions in (msg.emotes or {}).values()) if kind == "emote" else 0
+        if not twitch_moderation.detect_message(kind, params, msg.text, twitch_count, occurrences):
+            continue
+
+        count, last = runtime.strikes.get((user_id, kind), (0, now))
+        strike = count + 1 if now - last <= strike_window else 1
+        stages = rule["stages"] if rule["stages"] is not None else settings["stages"]
+        candidate = _Violation(rule, strike, stages[min(strike, len(stages)) - 1])
+        # get_config returns filters in FILTER_KINDS order; a tie keeps the first.
+        if best is None or candidate.severity > best.severity:
+            best = candidate
+    return best
+
+
 async def check(msg: ChatMessage) -> bool:
     """成功處罰時阻止這則訊息觸發自訂指令。"""
-    twitch_id = int(msg.room.room_id)
+    room_id = msg.room.room_id
+    if msg.source_room_id is not None and msg.source_room_id != room_id:
+        return False
+    twitch_id = int(room_id)
     user = msg.user
     if not _enabled(twitch_id) or user.id == state.bot_user_id:
         return False
@@ -117,38 +199,25 @@ async def check(msg: ChatMessage) -> bool:
     if level >= PERMISSION_LEVELS["mod"]:
         return False
 
-    kind = "link"
     user_id = int(user.id)
     runtime = _channels.get(twitch_id)
     if runtime is None:
         runtime = _channels[twitch_id] = _Channel()
-    key = (user_id, kind)
-    lock = runtime.enforcement_locks.get(key)
+    lock = runtime.enforcement_locks.get(user_id)
     if lock is None:
-        lock = runtime.enforcement_locks[key] = asyncio.Lock()
+        lock = runtime.enforcement_locks[user_id] = asyncio.Lock()
     async with lock:
         if _channels.get(twitch_id) is not runtime:
             return False
         config = await _config(twitch_id, runtime)
         if _channels.get(twitch_id) is not runtime:
             return False
-        link = next(item for item in config["filters"] if item["kind"] == kind)
-        if not link["enabled"] or level >= PERMISSION_LEVELS[link["exempt_level"]]:
+        violation = _select_violation(msg, config, runtime, level, user_id, _now())
+        if violation is None:
             return False
 
-        now = _now()
-        settings = config["settings"]
-        strike_window = settings["strike_reset_minutes"] * 60
-        runtime.prune(now, strike_window)
-        if now < runtime.permits.get(user_id, now) or not twitch_moderation.detect_link(
-            msg.text, link["params"]["whitelist"]
-        ):
-            return False
-
-        count, last = runtime.strikes.get(key, (0, now))
-        strike = count + 1 if now - last <= strike_window else 1
-        stages = link["stages"] if link["stages"] is not None else settings["stages"]
-        stage = stages[min(strike, len(stages)) - 1]
+        rule, strike, stage = violation.rule, violation.strike, violation.stage
+        kind = rule["kind"]
         action = stage["action"]
         duration = stage["duration"] if action == "timeout" else None
         label = twitch_moderation.FILTER_LABELS[kind]
@@ -166,7 +235,7 @@ async def check(msg: ChatMessage) -> bool:
             log.warning("頻道 %s 的 %s 執法失敗", twitch_id, kind, exc_info=True)
             succeeded = False
         else:
-            runtime.strikes[key] = (strike, _now())
+            runtime.strikes[(user_id, kind)] = (strike, _now())
             succeeded = True
 
         user_name = user.display_name or user.name
@@ -186,13 +255,14 @@ async def check(msg: ChatMessage) -> bool:
             await asyncio.to_thread(_write_log, entry)
         except SQLAlchemyError:
             log.exception("頻道 %s 的 %s 執法紀錄寫入失敗", twitch_id, kind)
-        if succeeded and not link["silent"] and _channels.get(twitch_id) is runtime:
+        if succeeded and not rule["silent"] and _channels.get(twitch_id) is runtime:
             now = _now()
             last_notice = runtime.notices.get(kind)
             if last_notice is None or now - last_notice >= twitch_moderation.NOTICE_SECONDS:
                 runtime.notices[kind] = now
+                default_notice = twitch_moderation.DEFAULT_NOTICE if kind == "link" else twitch_moderation.GENERAL_NOTICE
                 notice = substitute(
-                    link["notice"] or twitch_moderation.DEFAULT_NOTICE, {"user": user_name, "filter": label}
+                    rule["notice"] or default_notice, {"user": user_name, "filter": label}
                 )
                 try:
                     await state.chat.send_message(msg.room.name, notice)

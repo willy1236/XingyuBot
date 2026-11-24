@@ -1,15 +1,18 @@
-"""頻道聊天室過濾設定、連結判定與執法紀錄。"""
+"""頻道聊天室過濾設定、訊息判定與執法紀錄。"""
 
 import json
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, TypedDict
+from unicodedata import category
 from urllib.parse import urlsplit
 
 from sqlalchemy import text
 from sqlmodel import select
 
+from starlib._twitch_unicode import EMOJI_PRESENTATION_RANGES, LATIN_RANGES, TEXT_EMOJI_RANGES
 from starlib.database import TwitchEnforcementLog, TwitchModerationFilter, TwitchModerationSetting, sqldb
 from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import AuditActor, record_change
@@ -32,6 +35,7 @@ PERCENT_RANGE = (1, 100)
 DUPLICATE_SECONDS_RANGE = (1, 300)
 DUPLICATE_COUNT_RANGE = (2, 100)
 DEFAULT_NOTICE = "{user}，請遵守聊天室的{filter}分享規則。"
+GENERAL_NOTICE = "{user}，請遵守聊天室的{filter}過濾規則。"
 NOTICE_SECONDS = 10
 NOTICE_MAX_LENGTH = 500
 STRIKE_RESET_MINUTES = 60
@@ -136,6 +140,16 @@ _LINK = re.compile(
     re.IGNORECASE,
 )
 _HOST = re.compile(_DOMAIN, re.IGNORECASE | re.ASCII)
+_LATIN = re.compile(f"[{LATIN_RANGES}]")
+_EMOJI_ELEMENT = (
+    rf"(?:[{EMOJI_PRESENTATION_RANGES}](?!\ufe0e)\ufe0f?|[{TEXT_EMOJI_RANGES}]\ufe0f)"
+    r"[\U0001f3fb-\U0001f3ff]?"
+)
+_EMOJI = re.compile(
+    r"[\U0001f1e6-\U0001f1ff]{2}|[#*0-9]\ufe0f?\u20e3|"
+    r"\U0001f3f4[\U000e0020-\U000e007e]+\U000e007f|"
+    rf"{_EMOJI_ELEMENT}(?:\u200d{_EMOJI_ELEMENT})*"
+)
 
 
 def _host_path(host: str, path: str) -> tuple[str, str]:
@@ -190,6 +204,101 @@ def detect_link(text: str, whitelist: Sequence[str]) -> bool:
             for allowed_host, separator, prefix in allowed
         ):
             return True
+    return False
+
+
+@lru_cache(maxsize=128)
+def _blocked_patterns(words: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
+    return tuple(tuple(part for part in word.casefold().split("*") if part) for word in words if word)
+
+
+def detect_blocked_word(text: str, words: Sequence[str]) -> bool:
+    """萬用字元兩側的文字只需依序出現，不限制中間字元。"""
+    folded = text.casefold()
+    for pattern in _blocked_patterns(tuple(words)):
+        start = 0
+        for part in pattern:
+            index = folded.find(part, start)
+            if index < 0:
+                break
+            start = index + len(part)
+        else:
+            return True
+    return False
+
+
+def detect_caps(text: str, min_count: int, min_percent: int) -> bool:
+    letters = [letter for letter in _LATIN.findall(text) if letter.isalpha()]
+    uppercase = sum(letter.isupper() for letter in letters)
+    return uppercase >= min_count and uppercase * 100 >= len(letters) * min_percent
+
+
+def detect_emotes(text: str, twitch_count: int, min_count: int) -> bool:
+    return twitch_count >= min_count or twitch_count + len(_EMOJI.findall(text)) >= min_count
+
+
+_COMMON_FULLWIDTH_PUNCTUATION = frozenset("。，、！？：；「」『』（）～…—")
+
+
+def detect_symbols(text: str, min_count: int) -> bool:
+    count = sum(
+        char not in _COMMON_FULLWIDTH_PUNCTUATION and category(char)[0] in "PS"
+        for char in _EMOJI.sub("", text)
+    )
+    return count >= min_count
+
+
+def detect_repetition(text: str, min_percent: int) -> bool:
+    length = len(text)
+    if length < 10:
+        return False
+    # For each possible period, mark the union of runs containing at least two copies.
+    coverage = [0] * (length + 1)
+    for period in range(1, length // 2 + 1):
+        run_start = period
+        for end in range(period, length + 1):
+            if end < length and text[end] == text[end - period]:
+                continue
+            if end - run_start >= period:
+                start = run_start - period
+                if (end - start) * 100 >= length * min_percent:
+                    return True
+                coverage[start] += 1
+                coverage[end] -= 1
+            run_start = end + 1
+    active = repeated = 0
+    for delta in coverage:
+        active += delta
+        repeated += active > 0
+    return repeated * 100 >= length * min_percent
+
+
+def detect_length(text: str, min_length: int) -> bool:
+    return len(text) >= min_length
+
+
+def detect_duplicate(occurrences: int, min_count: int) -> bool:
+    return occurrences >= min_count
+
+
+def detect_message(kind: str, params: dict[str, Any], text: str, twitch_count: int, occurrences: int) -> bool:
+    match kind:
+        case "link":
+            return detect_link(text, params["whitelist"])
+        case "blocked_word":
+            return detect_blocked_word(text, params["words"])
+        case "caps":
+            return detect_caps(text, params["min_count"], params["min_percent"])
+        case "emote":
+            return detect_emotes(text, twitch_count, params["min_count"])
+        case "symbol":
+            return detect_symbols(text, params["min_count"])
+        case "repetition":
+            return detect_repetition(text, params["min_percent"])
+        case "length":
+            return detect_length(text, params["min_length"])
+        case "duplicate":
+            return detect_duplicate(occurrences, params["min_count"])
     return False
 
 
