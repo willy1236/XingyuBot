@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 from sqlalchemy import delete
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 
 from starlib.database import TwitchEnforcementLog, sqldb
 from starlib.twitch_audit import AuditActor, record_change
@@ -19,8 +19,8 @@ def _cutoff():
     return nowtz() - timedelta(days=RETENTION_DAYS)
 
 
-def list_page(twitch_id: int, offset: int = 0) -> list[TwitchEnforcementLog]:
-    """頻道 30 天內的執法紀錄，新的在前，從第 offset 筆起最多 PAGE_SIZE 筆。"""
+def list_page(session: Session, twitch_id: int, offset: int = 0) -> list[TwitchEnforcementLog]:
+    """頻道 30 天內的執法紀錄，新的在前，從第 offset 筆起最多 PAGE_SIZE 筆。session 由呼叫端提供。"""
     stmt = (
         select(TwitchEnforcementLog)
         .where(TwitchEnforcementLog.twitch_id == twitch_id, TwitchEnforcementLog.at >= _cutoff())
@@ -29,7 +29,7 @@ def list_page(twitch_id: int, offset: int = 0) -> list[TwitchEnforcementLog]:
         .limit(PAGE_SIZE)
         .execution_options(populate_existing=True)
     )
-    return list(sqldb.session.exec(stmt).all())
+    return list(session.exec(stmt).all())
 
 
 def get(twitch_id: int, log_id: int) -> TwitchEnforcementLog | None:

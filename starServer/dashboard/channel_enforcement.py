@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from starlib import twitch_enforcement, twitch_regulars
+from starlib import sqldb, twitch_enforcement, twitch_regulars
 from starlib.database import TwitchEnforcementLog
 from starlib.messaging import rpc
 
@@ -42,9 +42,8 @@ def entry_json(row: TwitchEnforcementLog) -> dict:
     }
 
 
-def list_json(twitch_id: int, offset: int) -> dict:
-    """同步函式，要在 DB worker thread 上呼叫。"""
-    rows = twitch_enforcement.list_page(twitch_id, offset)
+def page_json(rows: list[TwitchEnforcementLog]) -> dict:
+    """列表端點的回應：這一頁的紀錄與有沒有下一頁。"""
     return {"entries": [entry_json(row) for row in rows], "has_next": len(rows) == twitch_enforcement.PAGE_SIZE}
 
 
@@ -70,7 +69,7 @@ async def _find(twitch_id: int, log_id: int) -> TwitchEnforcementLog:
 async def list_enforcement(
     twitch_id: int, offset: Annotated[int, Query(ge=0)] = 0, _access: ChannelAccess = Depends(require_channel)
 ):
-    return await run_db(lambda: list_json(twitch_id, offset))
+    return await run_db(lambda: page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset)))
 
 
 @router.post("/channels/{twitch_id}/enforcement/{log_id}/lift")
@@ -89,7 +88,9 @@ async def lift(twitch_id: int, log_id: LogId, access: ChannelAccess = Depends(re
 
 
 @router.post("/channels/{twitch_id}/enforcement/{log_id}/clear-strikes", status_code=204)
-async def clear_strikes(twitch_id: int, log_id: LogId, access: ChannelAccess = Depends(require_enabled_channel)) -> None:
+async def clear_strikes(
+    twitch_id: int, log_id: LogId, access: ChannelAccess = Depends(require_enabled_channel)
+) -> None:
     row = await _find(twitch_id, log_id)
     await _call("moderation.clear_strikes", twitch_id, row.user_id)
     await run_db(
