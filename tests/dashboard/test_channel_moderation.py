@@ -42,7 +42,12 @@ def channel_id(request):
 def host(monkeypatch, repo, channel_id, dashboard_env):
     for module in (channels, commands, viewers, twitch_audit, twitch_commands, twitch_regulars):
         monkeypatch.setattr(module, "sqldb", repo)
-    for name in ("starlib.twitch_moderation", "starServer.dashboard.channel_moderation", BOT_MODERATION):
+    for name in (
+        "starlib.twitch_moderation",
+        "starServer.dashboard.channel_moderation",
+        "starServer.dashboard.channel_settings",
+        BOT_MODERATION,
+    ):
         if find_spec(name) is not None:
             module = import_module(name)
             if hasattr(module, "sqldb"):
