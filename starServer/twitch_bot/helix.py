@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 from aiohttp import ClientResponse, ClientResponseError, ClientSession
 from twitchAPI.object.api import BlockedTerm
 from twitchAPI.twitch import Twitch
-from twitchAPI.type import AuthScope, AuthType, TwitchAPIException, UnauthorizedException
+from twitchAPI.type import AuthScope, AuthType, ForbiddenError, TwitchAPIException, UnauthorizedException
 
 
 class TwitchStatusError(TwitchAPIException):
@@ -56,9 +56,8 @@ class BotTwitch(Twitch):
                 raise TwitchStatusError(method, endpoint, response.status)
         enforcing = delete or (method == "POST" and endpoint == "moderation/bans")
         if enforcing and not 200 <= response.status < 300:
-            # delete_chat_message 會把 403 轉為 ForbiddenError；其餘已知狀態交由 SDK 處理。
-            if delete and response.status == 403:
-                return response
+            if response.status == 403:
+                raise ForbiddenError(f"Twitch {method} {endpoint} failed: HTTP 403")
             if response.status not in (400, 401, 404, 500, 503):
                 # SDK 4.5.0 的 429 只會等待重設，刪除方法最後仍會當成成功。
                 raise TwitchAPIException(f"Twitch {method} {endpoint} failed: HTTP {response.status}")

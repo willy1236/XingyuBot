@@ -13,14 +13,14 @@ from aiohttp import ClientError
 from sqlalchemy.exc import SQLAlchemyError
 from twitchAPI.chat import ChatCommand, ChatMessage, EventData
 from twitchAPI.helper import first
-from twitchAPI.type import TwitchAPIException
+from twitchAPI.type import ForbiddenError, TwitchAPIException
 
 from starlib import twitch_moderation
 from starlib.database import TwitchEnforcementLog, sqldb
 from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_moderation import FilterConfig, ModerationConfig, Stage
 from starlib.twitch_speech_check import substitute
-from starServer.twitch_bot import state
+from starServer.twitch_bot import channels, state
 from starServer.twitch_bot.helix import TwitchStatusError
 from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
@@ -233,6 +233,10 @@ async def check(msg: ChatMessage) -> bool:
     user = msg.user
     if not _enabled(twitch_id) or user.id == state.bot_user_id:
         return False
+    now = _now()
+    channels.refresh_mod_state_if_due(twitch_id, now)
+    if channels.mod_state(twitch_id) is False:
+        return False
     level = viewer_level(msg)
     if level >= PERMISSION_LEVELS["mod"]:
         return False
@@ -248,7 +252,7 @@ async def check(msg: ChatMessage) -> bool:
         if _channels.get(twitch_id) is not runtime:
             return False
         config = await _config(twitch_id, runtime)
-        if _channels.get(twitch_id) is not runtime:
+        if _channels.get(twitch_id) is not runtime or channels.mod_state(twitch_id) is False:
             return False
         violation = _select_violation(msg, config, runtime, level, user_id, _now())
         if violation is None:
@@ -269,6 +273,9 @@ async def check(msg: ChatMessage) -> bool:
                 await state.twitch.ban_user(
                     str(twitch_id), state.bot_user_id, user.id, f"違反{label}過濾規則", duration=duration
                 )
+        except ForbiddenError:
+            channels.mark_not_mod(twitch_id)
+            return False
         except TwitchAPIException, ClientError, TimeoutError, ValueError:
             log.warning("頻道 %s 的 %s 執法失敗", twitch_id, kind, exc_info=True)
             succeeded = False
@@ -343,13 +350,15 @@ async def permit(cmd: ChatCommand) -> None:
 
 async def lift(payload: dict[str, Any]) -> dict[str, str]:
     """RPC `moderation.lift`：解除觀眾在頻道的 timeout 或 ban。Twitch 回 400 是不在處罰中、403 是 bot 不是 mod，其他失敗拋錯。"""
+    twitch_id = int(payload["twitch_id"])
     try:
-        await state.twitch.unban_user(str(int(payload["twitch_id"])), state.bot_user_id, str(int(payload["user_id"])))
+        await state.twitch.unban_user(str(twitch_id), state.bot_user_id, str(int(payload["user_id"])))
     except TwitchStatusError as exc:
         match exc.status:
             case 400:
                 return {"result": "not_punished"}
             case 403:
+                channels.mark_not_mod(twitch_id)
                 return {"result": "not_mod"}
         raise
     return {"result": "lifted"}
