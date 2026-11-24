@@ -415,7 +415,7 @@ COMMIT;
 
 **依賴**：C-02（聊天室管理頁）、C-06（`_call` 擴充）
 
-**進度**：進行中。後端 Blocked Terms RPC（`blocked_terms.list`／`add`／`remove`、`helix.py` 補 403 轉換與 read／manage 擇一的 scope）與契約文件。續做 `starServer/dashboard/channel_blocked_terms.py` 與 `starlib/twitch_blocked_terms.py`，再做前端 `blocked-terms.tsx`。無需 ALTER（沿用 `twitch_channel_audit`）。
+**進度**：進行中。後端完成：Blocked Terms RPC（`blocked_terms.list`／`add`／`remove`、`helix.py` 補 403 轉換與 read／manage 擇一的 scope）與契約文件 `71bead9c`；後台端點與修改紀錄（not_mod 409 `bot_not_mod`、離線 503 `bot_offline`、其他 Twitch 失敗 502 `twitch_failed`；刪除前先 list 取詞文字寫進 before）本 commit。續做前端 `components/dashboard/channel/blocked-terms.tsx` 並放進 moderation `page.tsx`。無需 ALTER（沿用 `twitch_channel_audit`）。
 
 ### C-08 觀眾與 mod 能在聊天室用 !title、!game、!uptime
 
