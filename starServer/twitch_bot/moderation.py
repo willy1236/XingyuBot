@@ -6,6 +6,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any
 from weakref import WeakValueDictionary
 
@@ -13,15 +14,17 @@ from aiohttp import ClientError
 from sqlalchemy.exc import SQLAlchemyError
 from twitchAPI.chat import ChatCommand, ChatMessage, EventData
 from twitchAPI.helper import first
-from twitchAPI.type import ForbiddenError, TwitchAPIException
+from twitchAPI.object.api import BannedUser
+from twitchAPI.type import AuthScope, ForbiddenError, TwitchAPIException
 
-from starlib import twitch_moderation, twitch_regulars
+from starlib import twitch_moderation, twitch_regulars, twitch_speech_check, twitch_tokens
 from starlib.database import TwitchEnforcementLog, sqldb
 from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_moderation import FilterConfig, ModerationConfig, Stage
 from starlib.twitch_speech_check import substitute
+from starlib.utils import nowtz
 from starServer.twitch_bot import channels, state
-from starServer.twitch_bot.helix import TwitchStatusError
+from starServer.twitch_bot.helix import BotTwitch, TwitchStatusError
 from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
@@ -266,6 +269,7 @@ async def check(msg: ChatMessage) -> bool:
         action = stage["action"]
         duration = stage["duration"] if action == "timeout" else None
         label = twitch_moderation.FILTER_LABELS[kind]
+        applied = None
         try:
             if action == "delete":
                 if not msg.id:
@@ -273,7 +277,7 @@ async def check(msg: ChatMessage) -> bool:
                     raise ValueError("缺少要刪除的訊息 ID")
                 await state.twitch.delete_chat_message(str(twitch_id), state.bot_user_id, msg.id)
             else:
-                await state.twitch.ban_user(
+                applied = await state.twitch.ban_user(
                     str(twitch_id), state.bot_user_id, user.id, f"違反{label}過濾規則", duration=duration
                 )
         except ForbiddenError:
@@ -289,6 +293,7 @@ async def check(msg: ChatMessage) -> bool:
         user_name = user.display_name or user.name
         entry = TwitchEnforcementLog(
             twitch_id=twitch_id,
+            at=(applied.created_at if applied and applied.created_at else nowtz()).replace(microsecond=0),
             user_id=user_id,
             user_login=user.name,
             user_name=user_name,
@@ -351,19 +356,58 @@ async def permit(cmd: ChatCommand) -> None:
     await cmd.reply(f"已放行 {user.display_name}，{seconds} 秒內可以分享連結")
 
 
-async def lift(payload: dict[str, Any]) -> dict[str, str]:
-    """RPC `moderation.lift`：解除觀眾在頻道的 timeout 或 ban。Twitch 回 400 是不在處罰中、403 是 bot 不是 mod，其他失敗拋錯。"""
-    twitch_id = int(payload["twitch_id"])
+async def _current_punishment(twitch_id: int, user_id: int) -> BannedUser | None:
+    # Get Banned Users 要求 broadcaster_id 等於 user token 所屬的實況主。
+    token = await twitch_tokens.broadcaster_token(twitch_id)
+    if isinstance(token, twitch_tokens.TokenInvalid):
+        raise TwitchAPIException("無法取得實況主 token 查驗目前處罰")
+    client_id = await asyncio.to_thread(twitch_speech_check.broadcaster_client_id_blocking)
+    client = BotTwitch(client_id, authenticate_app=False)
+    client.auto_refresh_auth = False
     try:
-        await state.twitch.unban_user(str(twitch_id), state.bot_user_id, str(int(payload["user_id"])))
-    except TwitchStatusError as exc:
-        match exc.status:
-            case 400:
-                return {"result": "not_punished"}
-            case 403:
-                channels.mark_not_mod(twitch_id)
-                return {"result": "not_mod"}
-        raise
+        await client.set_user_authentication(token, [AuthScope.MODERATION_READ], validate=False)
+        return await first(client.get_banned_users(str(twitch_id), user_id=str(user_id), first=None))
+    finally:
+        await client.close()
+
+
+async def lift(payload: dict[str, Any]) -> dict[str, str]:
+    """RPC `moderation.lift`：只在 Helix 的現行處罰符合所選列時解除。"""
+    twitch_id, user_id = int(payload["twitch_id"]), int(payload["user_id"])
+    action, duration = payload["action"], payload["duration"]
+    started = datetime.fromisoformat(payload["at"])
+    if action == "timeout" and duration:
+        expires = started + timedelta(seconds=duration)
+    elif action == "ban" and duration is None:
+        expires = None
+    else:
+        return {"result": "not_punished"}
+
+    runtime = _channels.get(twitch_id)
+    if runtime is None:
+        runtime = _channels[twitch_id] = _Channel()
+    async with runtime.enforcement_lock(user_id):
+        current = await _current_punishment(twitch_id, user_id)
+        if (
+            current is None
+            or current.user_id != str(user_id)
+            or current.moderator_id != state.bot_user_id
+            or current.created_at is None
+            or current.created_at.replace(microsecond=0) != started
+            or (current.expires_at and current.expires_at.replace(microsecond=0)) != expires
+            or (expires is not None and expires <= nowtz())
+        ):
+            return {"result": "not_punished"}
+        try:
+            await state.twitch.unban_user(str(twitch_id), state.bot_user_id, str(user_id))
+        except TwitchStatusError as exc:
+            match exc.status:
+                case 400:
+                    return {"result": "not_punished"}
+                case 403:
+                    channels.mark_not_mod(twitch_id)
+                    return {"result": "not_mod"}
+            raise
     return {"result": "lifted"}
 
 

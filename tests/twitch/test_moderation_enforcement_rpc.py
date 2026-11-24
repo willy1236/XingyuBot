@@ -4,6 +4,7 @@ handler 在 `twitch_chatbot.run()` 完成設定時以 `rpc.handle` 註冊（與 
 """
 
 import asyncio
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -11,6 +12,7 @@ import pytest
 from twitchAPI import twitch as sdk
 from twitchAPI.type import AuthScope
 
+from starlib import twitch_speech_check, twitch_tokens
 from starlib.messaging import rpc
 from starServer.twitch_bot import state
 from starServer.twitch_bot.helix import BotTwitch
@@ -90,6 +92,8 @@ def helix(monkeypatch):
             pass
 
     monkeypatch.setattr(sdk, "ClientSession", Session)
+    monkeypatch.setattr(twitch_tokens, "broadcaster_token", AsyncMock(return_value="broadcaster-token"))
+    monkeypatch.setattr(twitch_speech_check, "broadcaster_client_id_blocking", lambda: "broadcaster-client")
     client = BotTwitch("test-client", authenticate_app=False)
     asyncio.run(
         client.set_user_authentication(
@@ -111,14 +115,33 @@ def helix_response(status, body=None):
     return SimpleNamespace(status=status, headers={"Ratelimit-Reset": "0"}, json=AsyncMock(return_value=body or {}))
 
 
+def lift_payload(channel_id):
+    return {
+        "twitch_id": int(channel_id),
+        "user_id": int(ALICE),
+        "action": "ban",
+        "at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "duration": None,
+    }
+
+
+def helix_punishment(payload, **overrides):
+    current = {"user_id": ALICE, "moderator_id": BOT, "created_at": payload["at"], "expires_at": "", **overrides}
+    return helix_response(200, {"data": [current], "pagination": {}})
+
+
 def test_解除處罰以_Helix_unban_並回_lifted(helix, handlers, start_chat, channel_id):
     start_chat()
     helix.install()
-    helix.return_value = helix_response(204)
+    payload = lift_payload(channel_id)
+    helix.side_effect = [helix_punishment(payload), helix_response(204)]
 
-    result = call(handlers, "moderation.lift", {"twitch_id": int(channel_id), "user_id": int(ALICE)})
+    result = call(handlers, "moderation.lift", payload)
 
     assert result == {"result": "lifted"}
+    lookup, _ = helix.await_args_list
+    assert lookup.args[0] == "GET" and "moderation/banned" in lookup.args[1]
+    assert lookup.kwargs["headers"]["Authorization"] == "Bearer broadcaster-token"
     ((method, url), kwargs) = (helix.call_args.args[:2], helix.call_args.kwargs)
     assert (method, "moderation/bans" in url) == ("DELETE", True)
     sent = f"{url} {kwargs}"
@@ -129,17 +152,17 @@ def test_解除處罰以_Helix_unban_並回_lifted(helix, handlers, start_chat, 
 def test_Helix_400_視為不在處罰中_403_視為_bot_不是_mod(helix, handlers, start_chat, channel_id, status, result):
     start_chat()
     helix.install()
-    helix.return_value = helix_response(status, {"error": "x", "status": status, "message": "x"})
-    assert call(handlers, "moderation.lift", {"twitch_id": int(channel_id), "user_id": int(ALICE)}) == {
-        "result": result
-    }
+    payload = lift_payload(channel_id)
+    helix.side_effect = [helix_punishment(payload), helix_response(status, {"error": "x", "status": status, "message": "x"})]
+    assert call(handlers, "moderation.lift", payload) == {"result": result}
 
 
 @pytest.mark.parametrize("status", [500, 429])
 def test_其他_Twitch_失敗拋錯讓後台顯示失敗(helix, handlers, start_chat, channel_id, status):
     start_chat()
     helix.install()
-    helix.return_value = helix_response(status, {"error": "x", "status": status, "message": "x"})
+    payload = lift_payload(channel_id)
+    helix.side_effect = [helix_punishment(payload), helix_response(status, {"error": "x", "status": status, "message": "x"})]
     assert "moderation.lift" in handlers
     with pytest.raises(Exception):  # noqa: B017 失敗型別由實作決定，只要求不回成功
-        call(handlers, "moderation.lift", {"twitch_id": int(channel_id), "user_id": int(ALICE)})
+        call(handlers, "moderation.lift", payload)

@@ -40,11 +40,20 @@ async def list_enforcement(
 @router.post("/channels/{twitch_id}/enforcement/{log_id}/lift")
 async def lift(twitch_id: int, log_id: LogId, access: ChannelAccess = Depends(require_enabled_channel)):
     row = await _find(twitch_id, log_id)
-    if row.action not in ("timeout", "ban"):
+    if row.status != "ok" or row.action not in ("timeout", "ban"):
         raise DashboardError(400, "not_liftable")
     if not twitch_enforcement.is_active_punishment(row):
         return {"result": "not_punished"}
-    result = (await twitch_control.call_channel("moderation.lift", twitch_id, user_id=row.user_id))["result"]
+    result = (
+        await twitch_control.call_channel(
+            "moderation.lift",
+            twitch_id,
+            user_id=row.user_id,
+            action=row.action,
+            at=row.at.isoformat(),
+            duration=row.duration,
+        )
+    )["result"]
     if result == "not_mod":
         raise DashboardError(409, "bot_not_mod")
     if result == "lifted":

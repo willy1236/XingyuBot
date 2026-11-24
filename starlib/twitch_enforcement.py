@@ -65,7 +65,7 @@ def get(twitch_id: int, log_id: int) -> TwitchEnforcementLog | None:
 
 def is_active_punishment(row: TwitchEnforcementLog) -> bool:
     """這筆紀錄的處罰還可能在生效：是 timeout 或 ban、還沒解除，timeout 還沒到期。"""
-    if row.action not in ("timeout", "ban") or row.lifted_at is not None:
+    if row.status != "ok" or row.action not in ("timeout", "ban") or row.lifted_at is not None:
         return False
     return row.action == "ban" or row.at + timedelta(seconds=row.duration or 0) > nowtz()
 
