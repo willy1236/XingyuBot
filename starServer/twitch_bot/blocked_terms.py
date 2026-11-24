@@ -26,6 +26,11 @@ def register(loop: asyncio.AbstractEventLoop) -> None:
     rpc.handle("blocked_terms.remove", remove, loop)
 
 
+async def on_ready(_: object) -> None:
+    """Chat 的 READY（含重啟後換 loop）把 RPC 改綁到 Chat 的 loop；啟動設定時綁的 loop 在 run() 結束後就關閉了。"""
+    register(asyncio.get_running_loop())
+
+
 async def _as_mod(twitch_id: int, call: Callable[[], Awaitable[Reply]]) -> Reply:
     """Twitch 回 403 是 bot 不是頻道 mod，回 `{error: "not_mod"}`；其他失敗照常拋錯。"""
     try:

@@ -144,6 +144,7 @@ async def run():
     chat.register_event(ChatEvent.READY, channels.on_ready)
     chat.register_event(ChatEvent.READY, viewers.on_ready)
     chat.register_event(ChatEvent.READY, moderation.on_ready)
+    chat.register_event(ChatEvent.READY, blocked_terms.on_ready)
     chat.register_event(ChatEvent.READY, speech.on_ready)
     chat.register_event(ChatEvent.MESSAGE, commands.on_message)
     chat.register_event(ChatEvent.SUB, events.on_sub)

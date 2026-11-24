@@ -24,3 +24,20 @@ def test_只有_manage_scope_也能讀清單(helix, channel_id):
     result = call(helix, "blocked_terms.list", {"twitch_id": int(channel_id)})
 
     assert result == {"terms": [{"id": "t-1", "text": "壞詞"}]}
+
+
+def test_READY_把_Blocked_Terms_RPC_改綁到_Chat_的_loop(monkeypatch):
+    import asyncio
+
+    from starlib.messaging import rpc
+    from starServer.twitch_bot import blocked_terms
+
+    bound = {}
+    monkeypatch.setattr(rpc, "handle", lambda method, _handler, loop: bound.__setitem__(method, loop))
+
+    async def ready():
+        await blocked_terms.on_ready(None)
+        return asyncio.get_running_loop()
+
+    loop = asyncio.run(ready())
+    assert bound == dict.fromkeys(("blocked_terms.list", "blocked_terms.add", "blocked_terms.remove"), loop)
