@@ -472,7 +472,7 @@ COMMIT;
 
 **依賴**：C-08（`STREAM_INFO_SCOPES` 與啟用流程的權限）
 
-**進度**：進行中。已完成：`twitch_tokens.stream_info_granted`（從 C-08 的 bot 抽出，bot 與後台共用）。無需 ALTER。續做：`starServer/dashboard/channel_stream_info.py`（GET／categories／PUT，修改紀錄單一筆 target_key `stream`，before／after `{title, game, game_id}`，兩者都沒變不寫），再做前端。
+**進度**：進行中。後端完成：`twitch_tokens.stream_info_granted`（從 C-08 的 bot 抽出，bot 與後台共用）`97795720`；`starServer/dashboard/channel_stream_info.py` 的 GET／categories／PUT 與 `starlib/twitch_stream_info.py` 修改紀錄（單一筆、target_key `stream`、before／after `{title, game, game_id}`，兩者都沒變不呼叫 Helix 也不寫；PUT 成功回 204；Twitch 失敗 502 `twitch_failed`，token 失效 409 `scope_missing`；web 直打 Helix，沒有 bot_offline）本次 commit。無需 ALTER。續做：前端 `CHANNEL_NAV`、`stream/page.tsx`、`stream-info-form.tsx`（domalyze_frontend）。
 
 ### C-10 bot 不是 mod 時，後台列出暫停的聊天室管理功能
 

@@ -298,10 +298,10 @@ async def check(msg: ChatMessage) -> bool:
             last_notice = runtime.notices.get(kind)
             if last_notice is None or now - last_notice >= twitch_moderation.NOTICE_SECONDS:
                 runtime.notices[kind] = now
-                default_notice = twitch_moderation.DEFAULT_NOTICE if kind == "link" else twitch_moderation.GENERAL_NOTICE
-                notice = substitute(
-                    rule["notice"] or default_notice, {"user": user_name, "filter": label}
+                default_notice = (
+                    twitch_moderation.DEFAULT_NOTICE if kind == "link" else twitch_moderation.GENERAL_NOTICE
                 )
+                notice = substitute(rule["notice"] or default_notice, {"user": user_name, "filter": label})
                 try:
                     await state.chat.send_message(msg.room.name, notice)
                 except ClientError, TimeoutError, ValueError:
