@@ -291,6 +291,8 @@ def detect_repetition(text: str, min_percent: int) -> bool:
     if length < 10:
         return False
     threshold = (length * min_percent + 99) // 100
+    if threshold <= length and text == text[0] * length:
+        return True
     # A repeated interval cannot cover characters that occur only once.
     if (length - len(set(text))) * 2 < threshold:
         return False
