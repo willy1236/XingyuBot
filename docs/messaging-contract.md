@@ -326,8 +326,8 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 | `moderation.lift` | `{"twitch_id": int, "user_id": int}` | `{"result": "lifted" \| "not_punished" \| "not_mod"}` | 以 Helix Unban User 解除觀眾在頻道的 timeout 或 ban。Twitch 回 400 是 `not_punished`（觀眾已不在處罰中）、403 是 `not_mod`（bot 不是頻道 mod）；429 與其他非 2xx 拋錯，發送端收到 `RpcHandlerError`。 |
 | `moderation.clear_strikes` | `{"twitch_id": int, "user_id": int}` | `{}` | 清除該觀眾在頻道所有過濾器的犯規次數，之後再犯從第 1 段開始。次數只在 Twitch bot 記憶體，沒有紀錄時也回成功。 |
 | `blocked_terms.list` | `{"twitch_id": int}` | `{"terms": [{"id": string, "text": string}]}` \| `{"error": "not_mod"}` | 以 bot 的 mod 身分讀頻道的 Twitch Blocked Terms。Twitch 回 403 是 bot 不是頻道 mod，回 `{"error": "not_mod"}`；其他失敗拋錯，發送端收到 `RpcHandlerError`。 |
-| `blocked_terms.add` | `{"twitch_id": int, "text": string}` | `{"term": {"id": string, "text": string}}` \| `{"error": "not_mod"}` | 新增一個 Blocked Term，錯誤規則同 `blocked_terms.list`。 |
-| `blocked_terms.remove` | `{"twitch_id": int, "term_id": string}` | `{}` \| `{"error": "not_mod"}` | 刪除一個 Blocked Term，錯誤規則同 `blocked_terms.list`。 |
+| `blocked_terms.add` | `{"twitch_id": int, "text": string}` | `{"term": {"id": string, "text": string}, "changed": bool}` \| `{"error": "not_mod" \| "invalid_term"}` | 新增一個 Blocked Term，已存在時回該詞且 changed 為 false。Twitch 拒絕詞時回 invalid_term。 |
+| `blocked_terms.remove` | `{"twitch_id": int, "term_id": string}` | `{"term": {"id": string, "text": string} \| null}` \| `{"error": "not_mod"}` | 刪除一個 Blocked Term，回被刪除的詞，原本就沒有時回 null。 |
 
 - `channel.sync` 在 5 秒內回應：聊天室的加入或離開有自己的逾時，逾時或被 Twitch 拒絕時 `joined` 為 false；EventSub 的訂閱與取消排進背景，不計入這 5 秒。
 - `channel.sync` 可重複呼叫：對已加入的頻道再呼叫一次，會依實況主 token 查到的 bot 當下的 mod 狀態補訂或退訂需要 mod 的事件；拿不到實況主 token 時視為非 mod。

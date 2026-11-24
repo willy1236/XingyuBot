@@ -3,12 +3,20 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
+from weakref import WeakValueDictionary
 
 from starlib.messaging import rpc
 from starServer.twitch_bot import channels, state
 from starServer.twitch_bot.helix import TwitchStatusError
 
 type Reply = dict[str, Any]
+
+_locks: WeakValueDictionary[int, asyncio.Lock] = WeakValueDictionary()
+
+
+async def _terms(twitch_id: int) -> list[dict[str, str]]:
+    terms = state.twitch.get_blocked_terms(str(twitch_id), state.bot_user_id)
+    return [{"id": term.id, "text": term.text} async for term in terms]
 
 
 def register(loop: asyncio.AbstractEventLoop) -> None:
@@ -34,29 +42,43 @@ async def list_terms(payload: dict[str, Any]) -> Reply:
     twitch_id = int(payload["twitch_id"])
 
     async def call() -> Reply:
-        terms = state.twitch.get_blocked_terms(str(twitch_id), state.bot_user_id)
-        return {"terms": [{"id": term.id, "text": term.text} async for term in terms]}
+        return {"terms": await _terms(twitch_id)}
 
     return await _as_mod(twitch_id, call)
 
 
 async def add(payload: dict[str, Any]) -> Reply:
-    """RPC `blocked_terms.add`：回 `{term: {id, text}}`。"""
+    """RPC `blocked_terms.add`：回 `{term: {id, text}, changed}`。"""
     twitch_id = int(payload["twitch_id"])
 
     async def call() -> Reply:
-        term = await state.twitch.add_blocked_term(str(twitch_id), state.bot_user_id, payload["text"])
-        return {"term": {"id": term.id, "text": term.text}}
+        async with _locks.setdefault(twitch_id, asyncio.Lock()):
+            terms = await _terms(twitch_id)
+            text = payload["text"]
+            for existing in terms:
+                if existing["text"] == text:
+                    return {"term": existing, "changed": False}
+            try:
+                term = await state.twitch.add_blocked_term(str(twitch_id), state.bot_user_id, text)
+            except TwitchStatusError as exc:
+                if exc.status == 400:
+                    return {"error": "invalid_term"}
+                raise
+            return {"term": {"id": term.id, "text": term.text}, "changed": all(item["id"] != term.id for item in terms)}
 
     return await _as_mod(twitch_id, call)
 
 
 async def remove(payload: dict[str, Any]) -> Reply:
-    """RPC `blocked_terms.remove`：回 `{}`。"""
+    """RPC `blocked_terms.remove`：回 `{term: {id, text} | null}`。"""
     twitch_id = int(payload["twitch_id"])
 
     async def call() -> Reply:
-        await state.twitch.remove_blocked_term(str(twitch_id), state.bot_user_id, payload["term_id"])
-        return {}
+        async with _locks.setdefault(twitch_id, asyncio.Lock()):
+            term_id = payload["term_id"]
+            found = next((term for term in await _terms(twitch_id) if term["id"] == term_id), None)
+            if found is not None:
+                await state.twitch.remove_blocked_term(str(twitch_id), state.bot_user_id, term_id)
+            return {"term": found}
 
     return await _as_mod(twitch_id, call)
