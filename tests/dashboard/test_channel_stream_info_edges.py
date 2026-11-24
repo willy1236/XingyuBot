@@ -3,8 +3,9 @@
 import httpx
 import pytest
 
+from starlib import twitch_tokens
 from starlib.messaging import cache_invalidation
-
+from starServer.dashboard import twitch_control
 from tests.dashboard.test_channel_stream_info import (  # noqa: F401 (fixtures)
     MINECRAFT,
     NEW_TITLE,
@@ -48,6 +49,24 @@ def test_partial_category_update_accepts_empty_existing_title(host, twitch):
 
 def test_empty_update_request_is_rejected(host, twitch):
     assert host.put("stream-info", json={}).status_code == 400
+    assert twitch.requests == []
+
+
+def test_scope_is_checked_again_after_token_refresh(host, twitch, monkeypatch):
+    granted = True
+
+    async def refreshed_credentials(_):
+        nonlocal granted
+        granted = False
+        return "refreshed", "client-id"
+
+    monkeypatch.setattr(twitch_control, "broadcaster_credentials", refreshed_credentials)
+    monkeypatch.setattr(twitch_tokens, "stream_info_granted", lambda _: granted)
+
+    response = host.put("stream-info", json={"title": NEW_TITLE})
+
+    assert response.status_code == 409
+    assert response.json()["error"] == "scope_missing"
     assert twitch.requests == []
 
 

@@ -52,3 +52,20 @@ def test_uptime_retries_after_lookup_failure(monkeypatch):
     cmd.reply.reset_mock()
     asyncio.run(stream_info.uptime(cmd))
     cmd.reply.assert_awaited_once_with("未開台")
+
+
+def test_category_lookup_failure_on_second_page_does_not_patch(monkeypatch):
+    async def categories(*_, **__):
+        yield SimpleNamespace(id="1", name="Only on first page")
+        raise TwitchStatusError("GET", "search/categories", 429)
+
+    patch = AsyncMock()
+    monkeypatch.setattr(state, "twitch", SimpleNamespace(search_categories=categories), raising=False)
+    monkeypatch.setattr(stream_info, "_authorize", AsyncMock(return_value="token"))
+    monkeypatch.setattr(stream_info, "_patch", patch)
+    cmd = SimpleNamespace(room=SimpleNamespace(room_id="123"), parameter="query", reply=AsyncMock())
+
+    asyncio.run(stream_info.game(cmd))
+
+    cmd.reply.assert_awaited_once_with(stream_info._FAILED)
+    patch.assert_not_awaited()
