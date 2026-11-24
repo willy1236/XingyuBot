@@ -146,7 +146,7 @@ def detect_link(text: str, whitelist: Sequence[str]) -> bool:
     return False
 
 
-def validate_link(values: FilterValues) -> FilterValues:
+def _validate_common(values: FilterValues) -> None:
     level = values["exempt_level"]
     if level not in EXEMPT_LEVELS:
         raise InvalidField("exempt_level", "請選擇訂閱者、常客、VIP 或 mod")
@@ -155,11 +155,17 @@ def validate_link(values: FilterValues) -> FilterValues:
         raise InvalidField("notice", f"告知文字需為 1 到 {NOTICE_MAX_LENGTH} 字")
     if notice is not None and any(character in notice for character in "\r\n\0"):
         raise InvalidField("notice", "告知文字只能有一行")
-    raw = values["params"].get("whitelist")
+
+
+def _validate_whitelist(raw: object) -> list[str]:
     if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
         raise InvalidField("params", "白名單必須是網域或路徑的清單")
-    entries = list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
-    return {**values, "params": {"whitelist": entries}}
+    return list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
+
+
+def validate_link(values: FilterValues) -> FilterValues:
+    _validate_common(values)
+    return {**values, "params": {"whitelist": _validate_whitelist(values["params"].get("whitelist"))}}
 
 
 def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
@@ -225,8 +231,10 @@ def get_config(twitch_id: int) -> ModerationConfig:
 
 
 def update_link(twitch_id: int, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
-    values = validate_link(values)
-    kind = "link"
+    return _update_filter(twitch_id, "link", actor, validate_link(values), verify)
+
+
+def _update_filter(twitch_id: int, kind: str, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
     session = sqldb.session
     try:
         # 鎖也涵蓋尚無設定列的頻道。
