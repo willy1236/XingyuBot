@@ -61,8 +61,9 @@ class BotOffline:
         return hash(BotOffline)
 
 
-async def _call(method: str, twitch_id: int | None = None) -> dict | BotOffline:
-    payload = {} if twitch_id is None else {"twitch_id": twitch_id}
+async def _call(method: str, payload: dict[str, object] | None = None) -> dict | BotOffline:
+    """對 Twitch bot 發 RPC；payload 原樣送出，bot 沒在跑或沒在期限內回應時回 BotOffline。"""
+    payload = {} if payload is None else payload
     try:
         return await asyncio.wrap_future(rpc.request(SERVICE, method, payload))
     except rpc.RpcUnavailable:
@@ -74,7 +75,7 @@ async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
 
     bot 內部出錯時拋 `rpc.RpcHandlerError`，不當成離線。
     """
-    result = await _call("channel.sync", twitch_id)
+    result = await _call("channel.sync", {"twitch_id": twitch_id})
     if isinstance(result, BotOffline):
         return result
     return SyncResult(joined=bool(result["joined"]))
@@ -82,7 +83,7 @@ async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
 
 async def channel_status(twitch_id: int) -> ChannelStatus | BotOffline:
     """bot 目前對頻道的狀態：是否在聊天室、各 EventSub 訂閱的結果。bot 離線時回 BotOffline，不 raise。"""
-    result = await _call("channel.status", twitch_id)
+    result = await _call("channel.status", {"twitch_id": twitch_id})
     if isinstance(result, BotOffline):
         return result
     subscriptions = result["subscriptions"]

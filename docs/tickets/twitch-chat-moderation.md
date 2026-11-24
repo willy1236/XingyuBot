@@ -54,7 +54,7 @@ flowchart LR
 | 4 | C-03 | 實作完成 | 實況主能開啟其餘 7 種過濾器 | C-02 | — | |
 | 5 | C-04 | 實作完成 | 實況主能自訂處罰階段與犯規次數歸零時間 | C-02 | — | 與 C-03 改同一份設定與頁面 |
 | 6 | C-05 | 實作完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
-| 7 | C-06 | 未完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
+| 7 | C-06 | 進行中 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 未完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 未完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | |
 | 10 | C-09 | 未完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
@@ -390,7 +390,7 @@ COMMIT;
 
 **依賴**：C-02（執法紀錄的寫入）、C-01（加入常客）
 
-**進度**：未完成
+**進度**：進行中。`_call` 改成接受任意 payload（本 commit）。續做 Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC（`starServer/twitch_bot/moderation.py`、`helix.py`、`channels.py:register`）與 `docs/messaging-contract.md`，之後依序是後台 `channel_enforcement.py`、營運入口、30 天清除、前端。
 
 ### C-07 實況主與 mod 能在後台管理 Twitch Blocked Terms
 
