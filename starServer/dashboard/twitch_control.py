@@ -15,7 +15,9 @@ from starServer.dashboard.db import run_db
 
 SERVICE = "twitch"
 
-type CacheName = Literal["twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response", "twitch_regular"]
+type CacheName = Literal[
+    "twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response", "twitch_regular", "twitch_moderation"
+]
 
 
 @dataclass(frozen=True, slots=True)

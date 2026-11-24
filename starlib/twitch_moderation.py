@@ -1,0 +1,253 @@
+"""頻道聊天室過濾設定、連結判定與執法紀錄。"""
+
+import json
+import re
+from collections.abc import Callable, Sequence
+from typing import Any, TypedDict
+from urllib.parse import urlsplit
+
+from sqlalchemy import text
+from sqlmodel import select
+
+from starlib.database import TwitchEnforcementLog, TwitchModerationFilter, TwitchModerationSetting, sqldb
+from starlib.messaging import cache_invalidation
+from starlib.twitch_audit import AuditActor, record_change
+from starlib.utils import nowtz
+
+FILTER_KINDS = ("link", "blocked_word", "caps", "emote", "symbol", "repetition", "length", "duplicate")
+EXEMPT_LEVELS = ("subscriber", "regular", "vip", "mod")
+FILTER_LABELS = {"link": "連結"}
+DEFAULT_NOTICE = "{user}，請遵守聊天室的{filter}分享規則。"
+NOTICE_SECONDS = 10
+NOTICE_MAX_LENGTH = 500
+STRIKE_RESET_MINUTES = 60
+RAID_PAUSE_SECONDS = 120
+PERMIT_SECONDS = 60
+
+
+class Stage(TypedDict):
+    action: str
+    duration: int | None
+
+
+class FilterValues(TypedDict):
+    enabled: bool
+    exempt_level: str
+    params: dict[str, Any]
+    notice: str | None
+    silent: bool
+
+
+class FilterConfig(FilterValues):
+    kind: str
+    stages: list[Stage] | None
+    updated_at: str | None
+
+
+class Settings(TypedDict):
+    stages: list[Stage]
+    strike_reset_minutes: int
+    raid_pause_seconds: int
+    permit_seconds: int
+    updated_at: str | None
+
+
+class ModerationConfig(TypedDict):
+    settings: Settings
+    filters: list[FilterConfig]
+
+
+type Verify = Callable[[dict[str, str | None]], None]
+
+
+class InvalidField(ValueError):
+    def __init__(self, field: str, reason: str):
+        super().__init__(reason)
+        self.field = field
+
+
+# 裸網域只認這份封閉清單；有 http(s) 的 URL 則不受 TLD 限制。
+_BARE_TLDS = frozenset(
+    """
+    com net org edu gov mil int info biz name pro aero coop museum app dev live online site shop store tech xyz
+    ac ad ae af ag ai al am ao aq ar as at au aw ax az ba bb bd be bf bg bh bi bj bm bn bo br bs bt bv bw by bz
+    ca cc cd cf cg ch ci ck cl cm cn co cr cu cv cw cx cy cz de dj dk dm do dz ec ee eg er es et eu fi fj fk fm
+    fo fr ga gb gd ge gf gg gh gi gl gm gn gp gq gr gs gt gu gw gy hk hm hn hr ht hu id ie il im in io iq ir is
+    it je jm jo jp ke kg kh ki km kn kp kr kw ky kz la lb lc li lk lr ls lt lu lv ly ma mc md me mg mh mk ml mm
+    mn mo mp mq mr ms mt mu mv mw mx my mz na nc ne nf ng ni nl no np nr nu nz om pa pe pf pg ph pk pl pm pn pr
+    ps pt pw py qa re ro rs ru rw sa sb sc sd se sg sh si sj sk sl sm sn so sr ss st su sv sx sy sz tc td tf tg
+    th tj tk tl tm tn to tr tt tv tw tz ua ug uk us uy uz va vc ve vg vi vn vu wf ws ye yt za zm zw
+    """.split()
+)
+_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+_DOMAIN = rf"(?:{_LABEL}\.)+{_LABEL}"
+_LINK = re.compile(
+    rf"(?<![a-z0-9_@.-])(?P<scheme>https?://)?(?P<host>{_DOMAIN})(?![a-z0-9_-]|\.[a-z0-9])"
+    r"(?::[0-9]+)?(?P<path>/[^\s<>\x00-\x1f，。！？、；：」』）】]*)?",
+    re.IGNORECASE | re.ASCII,
+)
+_HOST = re.compile(_DOMAIN, re.IGNORECASE | re.ASCII)
+
+
+def _host_path(host: str, path: str) -> tuple[str, str]:
+    return host.lower().removeprefix("www."), path.lower().rstrip("/")
+
+
+def _normalize_whitelist_entry(entry: str) -> str:
+    raw = entry.strip()
+    try:
+        parsed = urlsplit(raw if "://" in raw else "//" + raw)
+        if (
+            parsed.scheme not in {"", "http", "https"}
+            or not parsed.hostname
+            or not _HOST.fullmatch(parsed.hostname)
+            or parsed.netloc.lower() != parsed.hostname
+            or "?" in raw
+            or "#" in raw
+            or any(character.isspace() or ord(character) < 32 for character in raw)
+        ):
+            raise ValueError
+    except ValueError:
+        raise InvalidField("params", "白名單請輸入網域或網域加路徑") from None
+    return "".join(_host_path(parsed.hostname, parsed.path))
+
+
+def detect_link(text: str, whitelist: Sequence[str]) -> bool:
+    """訊息有任何一個不在白名單內的連結時回傳 True。"""
+    allowed = [entry.partition("/") for entry in whitelist]
+    for match in _LINK.finditer(text):
+        domain = match["host"]
+        if not match["scheme"] and domain.rsplit(".", 1)[1].lower() not in _BARE_TLDS:
+            continue
+        raw_path = (match["path"] or "").split("?", 1)[0].split("#", 1)[0].rstrip(".,!;:)]}")
+        host, path = _host_path(domain, raw_path)
+        if not any(
+            (host == allowed_host or host.endswith("." + allowed_host))
+            and (not separator or path == "/" + prefix or path.startswith("/" + prefix + "/"))
+            for allowed_host, separator, prefix in allowed
+        ):
+            return True
+    return False
+
+
+def validate_link(values: FilterValues) -> FilterValues:
+    level = values["exempt_level"]
+    if level not in EXEMPT_LEVELS:
+        raise InvalidField("exempt_level", "請選擇訂閱者、常客、VIP 或 mod")
+    notice = values["notice"]
+    if notice is not None and (not notice.strip() or len(notice) > NOTICE_MAX_LENGTH):
+        raise InvalidField("notice", f"告知文字需為 1 到 {NOTICE_MAX_LENGTH} 字")
+    raw = values["params"].get("whitelist")
+    if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
+        raise InvalidField("params", "白名單必須是網域或路徑的清單")
+    entries = list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
+    return {**values, "params": {"whitelist": entries}}
+
+
+def _snapshot(row: TwitchModerationFilter | None, kind: str) -> FilterValues:
+    if row is None:
+        return {
+            "enabled": False,
+            "exempt_level": "vip",
+            "params": {"whitelist": []} if kind == "link" else {},
+            "notice": None,
+            "silent": False,
+        }
+    return {
+        "enabled": row.enabled,
+        "exempt_level": row.exempt_level,
+        "params": row.params,
+        "notice": row.notice,
+        "silent": row.silent,
+    }
+
+
+def comparable(values: FilterValues) -> dict[str, str | None]:
+    return {
+        "enabled": str(values["enabled"]).lower(),
+        "exempt_level": values["exempt_level"],
+        "params": json.dumps(values["params"], sort_keys=True, ensure_ascii=False),
+        "notice": values["notice"],
+        "silent": str(values["silent"]).lower(),
+    }
+
+
+def _stages(rows: list[dict[str, Any]]) -> list[Stage]:
+    return [{"action": row["action"], "duration": row["duration"]} for row in rows]
+
+
+def _filter_config(row: TwitchModerationFilter | None, kind: str) -> FilterConfig:
+    return {
+        **_snapshot(row, kind),
+        "kind": kind,
+        "stages": _stages(row.stages) if row is not None and row.stages is not None else None,
+        "updated_at": row.updated_at.isoformat() if row is not None else None,
+    }
+
+
+def get_config(twitch_id: int) -> ModerationConfig:
+    session = sqldb.session
+    row = session.get(TwitchModerationSetting, twitch_id, populate_existing=True)
+    filters = session.exec(
+        select(TwitchModerationFilter)
+        .where(TwitchModerationFilter.twitch_id == twitch_id)
+        .execution_options(populate_existing=True)
+    )
+    by_kind = {item.kind: item for item in filters}
+    settings: Settings = {
+        "stages": _stages(row.stages)
+        if row is not None
+        else [{"action": "delete", "duration": None}, {"action": "timeout", "duration": 600}],
+        "strike_reset_minutes": row.strike_reset_minutes if row is not None else STRIKE_RESET_MINUTES,
+        "raid_pause_seconds": row.raid_pause_seconds if row is not None else RAID_PAUSE_SECONDS,
+        "permit_seconds": row.permit_seconds if row is not None else PERMIT_SECONDS,
+        "updated_at": row.updated_at.isoformat() if row is not None else None,
+    }
+    return {"settings": settings, "filters": [_filter_config(by_kind.get(kind), kind) for kind in FILTER_KINDS]}
+
+
+def update_link(twitch_id: int, actor: AuditActor, values: FilterValues, verify: Verify) -> FilterConfig:
+    values = validate_link(values)
+    kind = "link"
+    session = sqldb.session
+    try:
+        # 鎖也涵蓋尚無設定列的頻道。
+        session.connection().execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"twitch_moderation:{twitch_id}"}
+        )
+        row = session.get(TwitchModerationFilter, (twitch_id, kind), populate_existing=True, with_for_update=True)
+        before = _snapshot(row, kind)
+        verify(comparable(before))
+        if before == values:
+            result = _filter_config(row, kind)
+            session.rollback()
+            return result
+        created = row is None
+        if row is None:
+            row = TwitchModerationFilter(twitch_id=twitch_id, kind=kind, **values)
+        else:
+            row.sqlmodel_update(dict(values))
+        row.updated_at = nowtz()
+        session.add(row)
+        session.flush()
+        record_change(
+            twitch_id,
+            actor,
+            "dashboard",
+            "moderation",
+            kind,
+            "create" if created else "update",
+            dict(before),
+            dict(values),
+        )
+        result = _filter_config(row, kind)
+        sqldb.commit()
+    except BaseException:
+        session.rollback()
+        raise
+    cache_invalidation.invalidate("twitch_moderation", str(twitch_id))
+    return result
+
+
+def record_enforcement(entry: TwitchEnforcementLog) -> None:
+    sqldb.add(entry)

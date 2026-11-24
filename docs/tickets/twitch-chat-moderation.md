@@ -268,7 +268,7 @@ COMMIT;
 - 處罰後 bot 自己的告知訊息也會進 `on_message`，bot 本身一律豁免。
 - `ban_user` 的 timeout 上限是 1209600 秒。
 
-**進度**：進行中。資料表隨 `feat(twitch): 新增聊天室過濾與執法資料表` 提交。SQLModel 建立三張新表，無需 ALTER。續做 `starlib/twitch_moderation.py` 的設定、白名單與後台 API。
+**進度**：進行中。資料表 `a0b7d905`，設定與 API 隨 `feat(dashboard): 提供聊天室連結過濾設定 API` 提交。SQLModel 建立三張新表，無需 ALTER。續做 `starServer/twitch_bot/moderation.py` 的聊天室執法與前端聊天室管理頁。
 
 ### C-03 實況主能開啟其餘 7 種過濾器
 
