@@ -95,7 +95,9 @@ async def uptime(cmd: ChatCommand) -> None:
     """`!uptime`：開台中回覆已開台時長，沒開台回覆「未開台」。"""
     twitch_id = int(cmd.room.room_id)
     ctx = await speech.prepare("{uptime}", speech.SpeechContext(twitch_id, cmd.room.name))
-    if ctx.stream is None:
+    if ctx.stream_lookup_failed:
+        await cmd.reply("查詢開台狀態失敗，請稍後再試")
+    elif ctx.stream is None:
         await cmd.reply(speech.NOT_LIVE)
     else:
         await cmd.reply(f"已開台 {speech.render('{uptime}', ctx)}")

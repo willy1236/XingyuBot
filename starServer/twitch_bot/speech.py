@@ -65,6 +65,7 @@ class SpeechContext:
     stream: StreamInfo | None = None
     channel_info: ChannelInfo | None = None
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
+    stream_lookup_failed: bool = False
 
 
 # ── 開台資訊 ──────────────────────────────────────────────
@@ -142,7 +143,7 @@ def _uptime(stream: StreamInfo | None, now: datetime) -> str:
 def _values(ctx: SpeechContext) -> dict[str, str]:
     values = dict(ctx.event)
     values["channel"] = ctx.channel
-    values["uptime"] = _uptime(ctx.stream, ctx.now)
+    values["uptime"] = UNKNOWN if ctx.stream_lookup_failed else _uptime(ctx.stream, ctx.now)
     values["game"] = ctx.channel_info.game if ctx.channel_info else UNKNOWN
     values["title"] = ctx.channel_info.title if ctx.channel_info else UNKNOWN
     if ctx.user is not None:
@@ -168,6 +169,7 @@ async def prepare(template: str, ctx: SpeechContext) -> SpeechContext:
     used = variables_used(template)
     if "uptime" in used and ctx.stream is None:
         ctx.stream = await _resolve_stream(ctx.twitch_id)
+        ctx.stream_lookup_failed = ctx.stream is None and ctx.twitch_id not in _live
     if used & {"game", "title"} and ctx.channel_info is None:
         ctx.channel_info = await _resolve_channel_info(ctx.twitch_id)
     return ctx

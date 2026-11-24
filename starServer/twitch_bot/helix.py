@@ -10,10 +10,7 @@ from twitchAPI.type import AuthScope, AuthType, ForbiddenError, TwitchAPIExcepti
 
 
 class TwitchStatusError(TwitchAPIException):
-    """解除處罰（DELETE moderation/bans）與 Blocked Terms（moderation/blocked_terms）收到非 2xx，改成拋出並帶狀態碼。
-
-    SDK 的 `unban_user` 會把 429、403 當成回傳 False；Blocked Terms 的 403 則只會丟 KeyError。
-    """
+    """Helix 回傳非 2xx，保留狀態碼讓呼叫端判斷。"""
 
     def __init__(self, method: str, endpoint: str, status: int):
         super().__init__(f"Twitch {method} {endpoint} failed: HTTP {status}")
@@ -45,15 +42,16 @@ class BotTwitch(Twitch):
         data: dict | None = None,
         retries: int = 1,
     ) -> ClientResponse:
-        endpoint = "/".join(urlsplit(url).path.rsplit("/", 2)[-2:])
+        endpoint = urlsplit(url).path.removeprefix("/helix/")
         delete = method == "DELETE" and endpoint == "moderation/chat"
-        if endpoint == "moderation/blocked_terms" and not 200 <= response.status < 300:
-            if response.status not in (401, 503):
-                raise TwitchStatusError(method, endpoint, response.status)
-        if method == "DELETE" and endpoint == "moderation/bans" and not 200 <= response.status < 300:
-            # 401 的刷新與 503 的重試仍交給 SDK。
-            if response.status not in (401, 503):
-                raise TwitchStatusError(method, endpoint, response.status)
+        strict = (
+            endpoint == "moderation/blocked_terms"
+            or (method == "DELETE" and endpoint == "moderation/bans")
+            or (method == "GET" and endpoint in {"users", "streams", "search/categories", "channels", "moderation/banned"})
+            or (method == "PATCH" and endpoint == "channels")
+        )
+        if strict and not 200 <= response.status < 300 and response.status not in (401, 503):
+            raise TwitchStatusError(method, endpoint, response.status)
         enforcing = delete or (method == "POST" and endpoint == "moderation/bans")
         if enforcing and not 200 <= response.status < 300:
             if response.status == 403:
@@ -63,7 +61,7 @@ class BotTwitch(Twitch):
                 raise TwitchAPIException(f"Twitch {method} {endpoint} failed: HTTP {response.status}")
 
         try:
-            return await super()._check_request_return(
+            checked = await super()._check_request_return(
                 session, response, method, url, auth_type, required_scope, data, retries
             )
         except (AttributeError, ClientResponseError, ValueError) as exc:
@@ -71,3 +69,6 @@ class BotTwitch(Twitch):
                 # 401 的刷新仍由 SDK 執行。若拒絕回應不是 JSON 物件，保留授權錯誤型別。
                 raise UnauthorizedException("Twitch authorization failed: HTTP 401") from exc
             raise
+        if strict and not 200 <= checked.status < 300:
+            raise TwitchStatusError(method, endpoint, checked.status)
+        return checked
