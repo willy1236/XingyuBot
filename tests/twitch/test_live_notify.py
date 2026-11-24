@@ -485,3 +485,35 @@ def test_online_skips_when_stream_not_found(online_bot, monkeypatch):
     asyncio.run(module.on_stream_online(event))
     assert fake_twitch.get_streams.call_count == 3
     bus.publish.assert_not_called()
+
+
+@pytest.mark.parametrize("status", [429, 502, 504])
+def test_online_retries_when_helix_stream_lookup_fails(online_bot, monkeypatch, status):
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from starServer.twitch_bot.helix import TwitchStatusError
+
+    module, fake_twitch, bus, event = online_bot
+    live = _helix_stream()
+    await_sleep = AsyncMock()
+    respond = AsyncMock()
+    monkeypatch.setattr(module.asyncio, "sleep", await_sleep)
+    monkeypatch.setattr(module, "_respond", respond)
+    monkeypatch.setattr(module.speech, "_live", {})
+
+    async def streams(user_id):
+        if fake_twitch.get_streams.call_count == 1:
+            raise TwitchStatusError("GET", "streams", status)
+        yield live
+
+    fake_twitch.get_streams.side_effect = streams
+
+    asyncio.run(module.on_stream_online(event))
+
+    assert fake_twitch.get_streams.call_count == 2
+    await_sleep.assert_awaited_once_with(10)
+    respond.assert_awaited_once()
+    bus.publish.assert_called_once()
+    assert bus.publish.call_args.args[0].stream_id == live.id
+    assert module.speech.current_stream(int(event.event.broadcaster_user_id)).title == live.title

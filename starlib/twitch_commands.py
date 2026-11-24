@@ -17,9 +17,11 @@ from starlib.twitch_audit import AuditActor, AuditSource, record_change
 from starlib.utils import nowtz
 
 #: 內建指令由 chat.register_command 處理，自訂指令不可同名
-BUILTIN_COMMANDS = frozenset({"add_cmd", "edit_cmd", "remove_cmd", "list_cmd"})
-#: 層級由低到高：所有人 < 訂閱者 < VIP < mod < 實況主
-PERMISSIONS = ("everyone", "subscriber", "vip", "mod", "broadcaster")
+BUILTIN_COMMANDS = frozenset(
+    {"add_cmd", "edit_cmd", "remove_cmd", "list_cmd", "title", "game", "uptime", "permit", "regular"}
+)
+#: 層級由低到高：所有人 < 訂閱者 < 常客 < VIP < mod < 實況主
+PERMISSIONS = ("everyone", "subscriber", "regular", "vip", "mod", "broadcaster")
 
 NAME_MAX = 25
 RESPONSE_MAX = 500
@@ -286,6 +288,7 @@ def update(
     row.user_cooldown = fields.user_cooldown
     row.permission = fields.permission
     row.updated_at = nowtz()
+    row.builtin_conflict = None
     sqldb.session.flush()
     record_change(twitch_id, actor, source, "command", new_name, "update", before, snapshot(row))
     _finish(twitch_id)

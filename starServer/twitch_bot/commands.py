@@ -17,12 +17,13 @@ from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import AuditActor
 from starlib.twitch_commands import BUILTIN_COMMANDS, PERMISSIONS, CommandFields, CommandInvalid, CommandMissing
 from starlib.twitch_speech_check import check_template
-from starServer.twitch_bot import speech, state, timers
+from starServer.twitch_bot import moderation, speech, state, timers
+from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
 
 #: 權限的層級：觸發者的層級要大於等於指令的權限
-_LEVEL = {name: level for level, name in enumerate(PERMISSIONS)}
+_LEVEL = PERMISSION_LEVELS
 _MOD = _LEVEL["mod"]
 #: 冷卻記錄超過這個數量時，順手清掉已過期的
 _PRUNE_AT = 1000
@@ -76,23 +77,12 @@ async def _on_invalidated(key: str | None) -> None:
 async def on_message(msg: ChatMessage):
     log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
     await timers.on_chat_message(int(msg.room.room_id), msg.user.name.lower() == state.chat.username.lower())
+    if await moderation.check(msg):
+        return
     await respond_to_chat_command(msg)
 
 
 # ── 觸發自訂指令 ──────────────────────────────────────────
-
-
-def _level(msg: ChatMessage) -> int:
-    user = msg.user
-    if str(user.id) == str(msg.room.room_id):
-        return len(PERMISSIONS) - 1
-    if user.mod:
-        return _MOD
-    if user.vip:
-        return _LEVEL["vip"]
-    if user.subscriber:
-        return _LEVEL["subscriber"]
-    return 0
 
 
 def _cooldown_passed(twitch_id: int, cmd: TwitchChatCommand, user_id: str) -> bool:
@@ -133,7 +123,7 @@ async def respond_to_chat_command(msg: ChatMessage):
     cmd = sqldb.get_twitch_cmd_response_cache(twitch_id, parts[0].lower())
     if cmd is None or not cmd.enabled:
         return
-    level = _level(msg)
+    level = viewer_level(msg)
     if level < _LEVEL.get(cmd.permission, len(PERMISSIONS) - 1):
         return
     if level < _MOD and not _cooldown_passed(twitch_id, cmd, str(msg.user.id)):
@@ -189,31 +179,32 @@ async def _automod_problem(twitch_id: int, response: str) -> str | None:
     return None
 
 
-async def _may_manage_commands(cmd: ChatCommand) -> bool:
-    """新增、修改、移除自訂指令的權限：實況主本人，或實況主沒有關閉 mod 協作時的頻道 mod；頻道的 state 還要是 enabled。
+async def may_manage(cmd: ChatCommand, what: str, *, reply_viewer: bool = False) -> bool:
+    """判斷實況主或 mod 能否執行聊天室管理操作，並依情況回覆拒絕原因。
 
-    一般觀眾不回應；其他情況在聊天室說明並回 False。
-    頻道列每次都讀資料庫而不是 `state.join_channels`：後台「刪除所有資料」與停用會先改 state，bot 稍後才收到同步通知
-    而離開聊天室，這段期間不能讓管理指令把資料寫回去；關閉 mod 協作也要下一次就生效。管理指令很少用，多一次查詢可以接受。
+    每次從資料庫讀取頻道狀態與 mod 協作開關，讓停用、刪除資料或關閉協作立即生效。
+    一般觀眾預設保持靜默，reply_viewer 為 True 時回覆權限不足。
     """
     room = cmd.room
     if room is None:
         return False
     is_broadcaster = str(cmd.user.id) == str(room.room_id)
     if not (is_broadcaster or cmd.user.mod):
+        if reply_viewer:
+            await cmd.reply(f"權限不足：只有實況主或 mod 能{what}")
         return False
     row = await _db(lambda: sqldb.get_twitch_join_channel(int(room.room_id)))
     if row is None or row.state != "enabled":
-        await cmd.reply("星羽目前未啟用，無法修改指令")
+        await cmd.reply(f"星羽目前未啟用，無法{what}")
         return False
     if not is_broadcaster and not row.mod_collab_enabled:
-        await cmd.reply("權限不足：實況主已關閉 mod 協作，只有實況主能修改指令")
+        await cmd.reply(f"權限不足：實況主已關閉 mod 協作，只有實況主能{what}")
         return False
     return True
 
 
 async def add_chat_command(cmd: ChatCommand):
-    if not await _may_manage_commands(cmd):
+    if not await may_manage(cmd, "修改指令"):
         return
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
@@ -237,7 +228,7 @@ async def add_chat_command(cmd: ChatCommand):
 
 async def edit_chat_command(cmd: ChatCommand):
     """!edit_cmd <名稱或別名> <新回應>：只改回應，別名、冷卻、權限、開關與使用次數不動。"""
-    if not await _may_manage_commands(cmd):
+    if not await may_manage(cmd, "修改指令"):
         return
     parameters = cmd.parameter.split(maxsplit=1)
     if len(parameters) < 2:
@@ -282,7 +273,7 @@ async def edit_chat_command(cmd: ChatCommand):
 
 
 async def remove_chat_command(cmd: ChatCommand):
-    if not await _may_manage_commands(cmd):
+    if not await may_manage(cmd, "修改指令"):
         return
     name = twitch_commands.normalize_name(cmd.parameter)
     if not name:
@@ -315,7 +306,3 @@ async def list_chat_command(cmd: ChatCommand):
             await cmd.reply(f"{command.name}：{command.response}")
         else:
             await cmd.reply(f"{parameters} 不存在")
-
-
-async def modify_channel_information(cmd: ChatCommand):
-    pass

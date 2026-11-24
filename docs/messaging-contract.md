@@ -323,6 +323,11 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 | `channel.sync` | `{"twitch_id": int}` | `{"accepted": true, "joined": bool}` | 依資料庫的 `state` 讓 bot 加入（`enabled`）或離開（其他）頻道的聊天室，並在背景訂閱或取消該頻道的 EventSub。`joined` 是聊天室處理完成後 bot 是否在該頻道。 |
 | `channel.status` | `{"twitch_id": int}` | `{"joined": bool, "subscriptions": {"ok": [string], "failed": [string], "pending": bool}}` | 回報已加入的房間與背景訂閱的結果，不打 Twitch API。`ok`、`failed` 是 EventSub 事件名稱，`pending` 為 true 表示背景還有訂閱或取消在進行。 |
 | `bot.status` | `{}` | `{"started_at": string \| null, "rooms": int}` | Twitch bot process 的啟動時間（ISO 8601）與目前實際在裡面的聊天室數，不打 Twitch API。營運入口的系統狀態用。 |
+| `moderation.lift` | `{"twitch_id": int, "user_id": int, "action": "timeout" \| "ban", "at": string, "duration": int \| null}` | `{"result": "lifted" \| "not_punished" \| "not_mod"}` | 用實況主 token 查現行處罰，吻合後以 bot 身分解除。查無、時間或類型不符、解除時 Twitch 回 400，回 `not_punished`。解除時 Twitch 回 403 是 `not_mod`，其他失敗拋錯。 |
+| `moderation.clear_strikes` | `{"twitch_id": int, "user_id": int}` | `{}` | 清除該觀眾在頻道所有過濾器的犯規次數，之後再犯從第 1 段開始。次數只在 Twitch bot 記憶體，沒有紀錄時也回成功。 |
+| `blocked_terms.list` | `{"twitch_id": int}` | `{"terms": [{"id": string, "text": string}]}` \| `{"error": "not_mod"}` | 以 bot 的 mod 身分讀頻道的 Twitch Blocked Terms。Twitch 回 403 是 bot 不是頻道 mod，回 `{"error": "not_mod"}`；其他失敗拋錯，發送端收到 `RpcHandlerError`。 |
+| `blocked_terms.add` | `{"twitch_id": int, "text": string}` | `{"term": {"id": string, "text": string}, "changed": bool}` \| `{"error": "not_mod" \| "invalid_term"}` | 新增一個 Blocked Term，已存在時回該詞且 changed 為 false。Twitch 拒絕詞時回 invalid_term。 |
+| `blocked_terms.remove` | `{"twitch_id": int, "term_id": string}` | `{"term": {"id": string, "text": string} \| null}` \| `{"error": "not_mod"}` | 刪除一個 Blocked Term，回被刪除的詞，原本就沒有時回 null。 |
 
 - `channel.sync` 在 5 秒內回應：聊天室的加入或離開有自己的逾時，逾時或被 Twitch 拒絕時 `joined` 為 false；EventSub 的訂閱與取消排進背景，不計入這 5 秒。
 - `channel.sync` 可重複呼叫：對已加入的頻道再呼叫一次，會依實況主 token 查到的 bot 當下的 mod 狀態補訂或退訂需要 mod 的事件；拿不到實況主 token 時視為非 mod。
@@ -339,3 +344,6 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 | `twitch_cmd` | 自訂指令 |
 | `twitch_timer` | 計時訊息 |
 | `twitch_event_response` | 事件回應 |
+| `twitch_regular` | 常客名單 |
+| `twitch_moderation` | 聊天室過濾設定 |
+| `twitch_stream_info` | 發言模板的標題與分類 |

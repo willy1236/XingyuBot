@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from starlib import twitch_speech_check
+from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.twitch_tokens import TokenInvalid
 from starServer.dashboard import channel_activation, twitch_control
@@ -17,6 +18,7 @@ from starServer.twitch_bot import channels as bot_channels
 
 TWITCH_ID = 777
 BOT_ID = "42"
+CHAT_MODERATION_FEATURES = {"chat_moderation", "permit", "enforcement_lift", "blocked_terms"}
 MOD_FEATURES = {
     "follow_response",
     "follow_forward",
@@ -28,6 +30,7 @@ MOD_FEATURES = {
     "gift_forward",
     "redemption_forward",
     "prediction_forward",
+    *CHAT_MODERATION_FEATURES,
 }
 ALL_FEATURES = {f.code for f in health.FEATURES}
 CHAT_FEATURES = {f.code for f in health.FEATURES if f.chat}
@@ -146,6 +149,19 @@ def test_請求帶對_token_與_bot(twitch):
 
 
 class TestNotMod:
+    def test_拿掉bot的mod會暫停聊天室管理功能_恢復mod後清單清空(self, twitch, monkeypatch, repo):
+        repo.add(TwitchBotJoinChannel(twitch_id=TWITCH_ID, state="enabled"))
+        monkeypatch.setattr(health, "sqldb", repo)
+        twitch.moderators = lambda: httpx.Response(200, json={"data": []})
+        paused = run(health.channel_health(TWITCH_ID))
+
+        twitch.moderators = lambda: httpx.Response(200, json={"data": [{"user_id": BOT_ID}]})
+        repaired = run(health.channel_health(TWITCH_ID))
+
+        assert (paused.state, paused.issues) == ("partial", ("not_mod",))
+        assert CHAT_MODERATION_FEATURES <= set(paused.paused_features)
+        assert repaired == ChannelHealth("enabled")
+
     def test_拿掉_mod_只暫停需要_mod_的功能_自訂指令照常(self, twitch):
         twitch.moderators = lambda: httpx.Response(200, json={"data": []})
         result = run(health.channel_health(TWITCH_ID))

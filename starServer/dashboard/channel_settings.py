@@ -43,6 +43,8 @@ def _delete_data(twitch_id: int, actor: AuditActor) -> None:
     （target_kind=channel、target_key=all_data），before 是刪除前的轉發設定；刪除失敗時紀錄一併 rollback。
     """
     try:
+        # 與執法紀錄寫入共用同一個頻道列鎖，先鎖再刪。
+        row = sqldb.session.get(TwitchBotJoinChannel, twitch_id, with_for_update=True, populate_existing=True)
         sqldb.delete_twitch_channel_data(twitch_id)
         credential_id = sqldb.get_oauth_client(APIType.Twitch, twitch_tokens.BROADCASTER_CLIENT_SEQ).credential_id
         sqldb.session.exec(
@@ -50,7 +52,6 @@ def _delete_data(twitch_id: int, actor: AuditActor) -> None:
                 col(OAuthToken.user_id) == str(twitch_id), col(OAuthToken.client_credential_id) == credential_id
             )
         )
-        row = sqldb.get(TwitchBotJoinChannel, (twitch_id,))
         before = (
             None
             if row is None
@@ -92,6 +93,8 @@ async def delete_channel_data(
     twitch_control.invalidate("twitch_cmd", twitch_id)
     twitch_control.invalidate("twitch_timer", twitch_id)
     twitch_control.invalidate("twitch_event_response", twitch_id)
+    twitch_control.invalidate("twitch_moderation", twitch_id)
+    twitch_control.invalidate("twitch_regular", twitch_id)
     return {"state": DEFAULT_STATE, "bot_offline": bot_offline}
 
 

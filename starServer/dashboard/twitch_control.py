@@ -12,10 +12,19 @@ from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_speech_check import TemplateCheck
 from starlib.twitch_tokens import TokenInvalid
 from starServer.dashboard.db import run_db
+from starServer.dashboard.errors import DashboardError
 
 SERVICE = "twitch"
 
-type CacheName = Literal["twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response"]
+type CacheName = Literal[
+    "twitch_channel",
+    "twitch_cmd",
+    "twitch_timer",
+    "twitch_event_response",
+    "twitch_regular",
+    "twitch_moderation",
+    "twitch_stream_info",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,12 +68,24 @@ class BotOffline:
         return hash(BotOffline)
 
 
-async def _call(method: str, twitch_id: int | None = None) -> dict | BotOffline:
-    payload = {} if twitch_id is None else {"twitch_id": twitch_id}
+async def _call(method: str, payload: dict[str, object] | None = None) -> dict | BotOffline:
+    """對 Twitch bot 發 RPC；payload 原樣送出，bot 沒在跑或沒在期限內回應時回 BotOffline。"""
+    payload = {} if payload is None else payload
     try:
         return await asyncio.wrap_future(rpc.request(SERVICE, method, payload))
     except rpc.RpcUnavailable:
         return BotOffline()
+
+
+async def call_channel(method: str, twitch_id: int, **payload: object) -> dict:
+    """呼叫 Twitch 頻道操作，將 RPC 失敗和離線轉成後台錯誤。"""
+    try:
+        result = await _call(method, {"twitch_id": twitch_id, **payload})
+    except rpc.RpcHandlerError:
+        raise DashboardError(502, "twitch_failed") from None
+    if isinstance(result, BotOffline):
+        raise DashboardError(503, "bot_offline")
+    return result
 
 
 async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
@@ -72,7 +93,7 @@ async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
 
     bot 內部出錯時拋 `rpc.RpcHandlerError`，不當成離線。
     """
-    result = await _call("channel.sync", twitch_id)
+    result = await _call("channel.sync", {"twitch_id": twitch_id})
     if isinstance(result, BotOffline):
         return result
     return SyncResult(joined=bool(result["joined"]))
@@ -80,7 +101,7 @@ async def sync_channel(twitch_id: int) -> SyncResult | BotOffline:
 
 async def channel_status(twitch_id: int) -> ChannelStatus | BotOffline:
     """bot 目前對頻道的狀態：是否在聊天室、各 EventSub 訂閱的結果。bot 離線時回 BotOffline，不 raise。"""
-    result = await _call("channel.status", twitch_id)
+    result = await _call("channel.status", {"twitch_id": twitch_id})
     if isinstance(result, BotOffline):
         return result
     subscriptions = result["subscriptions"]
@@ -105,7 +126,8 @@ async def broadcaster_token(twitch_id: int) -> str | TokenInvalid:
     return await run_db(lambda: twitch_tokens.broadcaster_token_blocking(twitch_id))
 
 
-async def _credentials(twitch_id: int) -> tuple[str, str] | TokenInvalid:
+async def broadcaster_credentials(twitch_id: int) -> tuple[str, str] | TokenInvalid:
+    """實況主的 access token 與它所屬的 Twitch OAuth 應用程式 client ID。"""
     token = await broadcaster_token(twitch_id)
     if isinstance(token, TokenInvalid):
         return token
@@ -118,9 +140,9 @@ async def check_template(twitch_id: int, template: str) -> TemplateCheck:
     W-05～W-07 的儲存端點先呼叫它：blocked 回 422 automod_blocked，unavailable 回 503 automod_unavailable。
     token 與 client id 的 DB 查詢走後台專屬的 executor。
     """
-    return await twitch_speech_check.check_template(twitch_id, template, get_credentials=_credentials)
+    return await twitch_speech_check.check_template(twitch_id, template, get_credentials=broadcaster_credentials)
 
 
 def invalidate(cache: CacheName, twitch_id: int) -> None:
-    """通知 bot 重讀某頻道的設定（頻道設定、自訂指令、計時訊息或事件回應）。bot 沒在跑時沒有影響，下次啟動會重讀。"""
+    """通知 bot 重讀某頻道的設定或常客名單。bot 沒在跑時沒有影響，下次啟動會重讀。"""
     cache_invalidation.invalidate(cache, str(twitch_id))

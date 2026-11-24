@@ -7,18 +7,19 @@ GET  /dashboard/ops/channels/{id}/health      單一頻道的完整判定（chan
 POST /dashboard/ops/channels/{id}/ban         停權：設 banned_at、state=disabled，bot 離開，並記修改紀錄
 POST /dashboard/ops/channels/{id}/unban       解除停權：回到 disabled，不自動啟用，並記修改紀錄
 GET  /dashboard/ops/channels/{id}/audit?page= 頻道的修改紀錄（新的在前，每頁 50 筆）
+GET  /dashboard/ops/channels/{id}/enforcement?offset= 頻道 30 天內的執法紀錄（新的在前，每頁 50 筆）
 
 所有端點都要求 bot owner；不是（含沒有 Discord 身分）回 403 not_bot_owner。
 這個代碼不能用 no_permission 或 discord_required：前端在全域把它們當成伺服器權限與 Discord 登入處理並整頁導走。
 """
 
 import logging
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from starlib import sqldb, twitch_audit
+from starlib import sqldb, twitch_audit, twitch_enforcement
 from starlib.database import OAuthToken, TwitchBotJoinChannel
 from starlib.twitch_tokens import missing_scopes, token_state
 from starlib.utils import nowtz
@@ -213,6 +214,20 @@ async def list_audit(twitch_id: int, page: int = 1, _: SessionInfo = Depends(req
             "entries": [e.to_json() for e in entries],
             "page": current,
             "has_next": has_next,
+        }
+
+    return await run_db(load)
+
+
+@router.get("/channels/{twitch_id}/enforcement")
+async def list_enforcement(
+    twitch_id: int, offset: Annotated[int, Query(ge=0)] = 0, _: SessionInfo = Depends(require_bot_owner)
+):
+    def load() -> dict[str, Any]:
+        channel = _channel_json(_get_row(twitch_id))
+        return {
+            "channel": channel,
+            **twitch_enforcement.page_json(twitch_enforcement.list_page(sqldb.session, twitch_id, offset)),
         }
 
     return await run_db(load)

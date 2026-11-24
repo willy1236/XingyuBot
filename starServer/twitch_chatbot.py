@@ -8,18 +8,30 @@ from twitchAPI.chat import Chat
 from twitchAPI.eventsub.webhook import EventSubWebhook
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticator
-from twitchAPI.twitch import Twitch
 from twitchAPI.type import (
     AuthScope,
     ChatEvent,
     InvalidTokenException,
     MissingScopeException,
+    TwitchAPIException,
 )
 
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starServer.twitch_bot import channels, commands, events, state, timers
+from starServer.twitch_bot import (
+    blocked_terms,
+    channels,
+    commands,
+    events,
+    moderation,
+    speech,
+    state,
+    stream_info,
+    timers,
+    viewers,
+)
+from starServer.twitch_bot.helix import BotTwitch as Twitch
 
 log = logging.getLogger(__name__)
 
@@ -117,14 +129,23 @@ async def run():
     # await helper.bind()
 
     me = await first(twitch.get_users())
-    users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
-    channels.rooms.update({int(user.id): user.login for user in users})
+    state.bot_user_id = me.id
+    try:
+        users = [user async for user in twitch.get_users(user_ids=state.TARGET_CHANNEL_IDS)]
+    except TwitchAPIException as exc:
+        log.warning("啟動時無法批次查詢 Twitch 頻道，交由頻道同步逐一查詢：%s", exc)
+    else:
+        channels.rooms.update({int(user.id): user.login for user in users})
 
     # create chat instance
     chat = state.chat = await Chat(twitch)
 
     # register the handlers for the events you want
     chat.register_event(ChatEvent.READY, channels.on_ready)
+    chat.register_event(ChatEvent.READY, viewers.on_ready)
+    chat.register_event(ChatEvent.READY, moderation.on_ready)
+    chat.register_event(ChatEvent.READY, blocked_terms.on_ready)
+    chat.register_event(ChatEvent.READY, speech.on_ready)
     chat.register_event(ChatEvent.MESSAGE, commands.on_message)
     chat.register_event(ChatEvent.SUB, events.on_sub)
     chat.register_event(ChatEvent.JOINED, events.on_bot_joined)
@@ -138,8 +159,15 @@ async def run():
     chat.register_command("edit_cmd", commands.edit_chat_command)
     chat.register_command("remove_cmd", commands.remove_chat_command)
     chat.register_command("list_cmd", commands.list_chat_command)
-    # TODO: modify_channel_information
+    chat.register_command("regular", viewers.regular_command)
+    chat.register_command("permit", moderation.permit)
+    moderation.register(asyncio.get_running_loop())
+    blocked_terms.register(asyncio.get_running_loop())
+    chat.register_command("title", stream_info.title)
+    chat.register_command("game", stream_info.game)
+    chat.register_command("uptime", stream_info.uptime)
 
+    await viewers.load_regulars()
     chat.start()
     await asyncio.sleep(5)
     await _wait_for_chat_loop()
@@ -155,7 +183,6 @@ async def run():
     eventsub.start()
     await asyncio.sleep(3)
     state.eventsub = eventsub
-    state.bot_user_id = me.id
     _serve_and_sync()
 
     return chat, twitch, eventsub

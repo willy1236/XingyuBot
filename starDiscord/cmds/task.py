@@ -9,7 +9,7 @@ from apscheduler.triggers.date import DateTrigger
 from discord.ext import commands
 from pydantic import ValidationError
 
-from starlib import sclient, sqldb, utils, website_stats
+from starlib import sclient, sqldb, twitch_enforcement, utils, website_stats
 from starlib.database import (
     APIType,
     NotifyChannelType,
@@ -40,6 +40,17 @@ async def settle_website_link_rate():
         await website_stats.settle_weeks()
     except Exception:
         log.exception("settle_website_link_rate failed")
+
+
+async def purge_twitch_enforcement_log():
+    """刪除超過保留期限的 Twitch 聊天室執法紀錄。"""
+    try:
+        deleted = await asyncio.to_thread(twitch_enforcement.purge_expired)
+    except Exception:
+        log.exception("purge_twitch_enforcement_log failed")
+    else:
+        if deleted:
+            log.info("已清除 %s 筆過期的 Twitch 執法紀錄", deleted)
 
 
 class task(Cog_Extension):
@@ -185,6 +196,18 @@ class task(Cog_Extension):
                 second=0,
                 jitter=60,
                 misfire_grace_time=90,
+            )
+            scheduler.add_job(
+                purge_twitch_enforcement_log,
+                "cron",
+                id="purge_twitch_enforcement_log",
+                name="Twitch 執法紀錄到期清除",
+                hour=4,
+                minute=10,
+                second=0,
+                jitter=300,
+                misfire_grace_time=3600,
+                max_instances=1,
             )
             scheduler.add_job(
                 settle_website_link_rate,

@@ -20,7 +20,7 @@ from starlib import sqldb
 from starlib.database import TwitchBotJoinChannel
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.providers.social.models import TwitchUser
-from starlib.twitch_tokens import ENABLE_SCOPES, MODERATORS_URL, bot_user_id_blocking
+from starlib.twitch_tokens import ENABLE_SCOPES, MODERATORS_URL, STREAM_INFO_SCOPES, bot_user_id_blocking
 
 from . import twitch_control
 from .auth import OAuthCookie, sanitize_origin
@@ -94,7 +94,7 @@ async def to_dashboard_twitch_enable(request: Request, channel: str | None = Non
     if await run_db(lambda: _is_banned(channel_id)):
         return RedirectResponse(url=_with_notice(_channel_url(origin, channel_id), "channel_banned"))
 
-    async with await new_twitch_oauth(ENABLE_SCOPES) as auth:
+    async with await new_twitch_oauth(ENABLE_SCOPES + STREAM_INFO_SCOPES) as auth:
         # force_verify：瀏覽器已登入另一個 Twitch 帳號時，使用者才有機會換帳號
         url, state = auth.get_authorization_url(force_verify="true")
     cookie = OAuthCookie(state=state, purpose="enable", next="/dashboard", origin=origin, channel_id=str(channel_id))
@@ -175,7 +175,7 @@ async def _handle_enable(request: Request, cookie: OAuthCookie) -> Response:
         return RedirectResponse(url=_with_notice(channel_url, "channel_banned"))
 
     try:
-        async with await new_twitch_oauth(ENABLE_SCOPES) as auth:
+        async with await new_twitch_oauth(ENABLE_SCOPES + STREAM_INFO_SCOPES) as auth:
             token = await auth.exchange_code(code)
             user = await auth.get_me()
             # 授權的帳號不是頻道本人：視同授權失敗，不保存 token

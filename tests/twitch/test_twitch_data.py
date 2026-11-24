@@ -1,7 +1,8 @@
 """Twitch 頻道功能資料（指令、計時訊息、事件回應、擋下紀錄）的 sqldb 存取函式。用綁在外層交易的 repo，測完 rollback。"""
 
 from sqlalchemy import text
-from sqlmodel import select
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlmodel import Session, select
 
 from starlib.database import (
     TwitchAutomodBlock,
@@ -11,6 +12,7 @@ from starlib.database import (
     TwitchPoint,
     TwitchTimer,
 )
+from starlib.database.postgresql.client import SQLRepository
 
 TWITCH_ID = 2000000011
 OTHER_ID = 2000000012
@@ -120,6 +122,21 @@ def test_依_twitch_id_刪除頻道資料_不碰修改紀錄與其他頻道(repo
 
     assert counts(TWITCH_ID) == [0, 0, 0, 0, 1, 0]
     assert counts(OTHER_ID) == [1, 1, 1, 1, 1, 1]
+
+
+def test_批次刪除可由呼叫端回滾(repo):
+    repo.save_twitch_chat_command(TwitchChatCommand(twitch_id=TWITCH_ID, name="hi", response="a"))
+    factory = scoped_session(
+        sessionmaker(bind=repo.session.connection(), class_=Session, join_transaction_mode="create_savepoint")
+    )
+    scoped_repo = SQLRepository(repo.engine, factory)
+    try:
+        scoped_repo.delete_twitch_channel_data(TWITCH_ID)
+        scoped_repo.session.rollback()
+
+        assert scoped_repo.get_chat_command("hi", TWITCH_ID) is not None
+    finally:
+        factory.remove()
 
 
 def test_指令快取存與_session_無關的複本(repo):

@@ -111,7 +111,10 @@ def test_offline_calls_timers(calls):
 def test_chat_message_tells_timers_whether_author_is_bot(calls, monkeypatch, author, is_bot):
     monkeypatch.setattr(commands, "respond_to_chat_command", AsyncMock())
     msg = SimpleNamespace(
-        room=SimpleNamespace(room_id=str(TWITCH_ID), name="host"), user=SimpleNamespace(name=author), text="hi"
+        room=SimpleNamespace(room_id=str(TWITCH_ID), name="host"),
+        user=SimpleNamespace(name=author),
+        text="hi",
+        source_room_id=None,
     )
     run(commands.on_message(msg))
     assert calls == [("on_chat_message", TWITCH_ID, is_bot)]

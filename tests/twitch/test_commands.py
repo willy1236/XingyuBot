@@ -260,6 +260,20 @@ def test_add_cmd_新增並記在聊天室來源(repo):
     assert (entry.actor.platform, entry.actor.id, entry.actor.name) == ("twitch", "100", "Viewer")
 
 
+def test_觀眾輸入_uptime_不會觸發舊的同名自訂指令(repo):
+    # 模擬尚有舊指令的資料，驗證內建名稱優先。
+    add(repo, "uptime")
+    assert not trigger("!uptime")
+
+
+@pytest.mark.parametrize("name", ["title", "permit", "regular"])
+def test_add_cmd_拒絕與新內建指令同名的自訂指令(repo, name):
+    cmd = command(f"{name} hello", BROADCASTER)
+    run(commands.add_chat_command(cmd))
+    assert "內建指令" in replied(cmd)
+    assert twitch_commands.find(TWITCH_ID, name) is None
+
+
 def test_管理指令只有實況主與_mod_能用(repo):
     for handler in (commands.add_chat_command, commands.edit_chat_command, commands.remove_chat_command):
         cmd = command("hi x", chatter())

@@ -72,18 +72,19 @@ def is_banned(row: TwitchBotJoinChannel | None) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class Feature:
-    """code：功能代碼（前端用它對應名稱）；chat：靠 bot 在聊天室發言；events：依賴的 EventSub 事件。"""
+    """功能代碼、聊天室需求、依賴的 EventSub 事件，以及功能本身是否需要 mod。"""
 
     code: str
     chat: bool
     events: tuple[str, ...] = ()
+    requires_mod: bool = False
 
     @property
     def needs_mod(self) -> bool:
-        return not EVENTS_NEED_MOD.isdisjoint(self.events)
+        return self.requires_mod or not EVENTS_NEED_MOD.isdisjoint(self.events)
 
 
-#: 所有功能都要實況主 token（發言前的 AutoMod 檢查、EventSub 訂閱），所以 token 失效時全部暫停。
+#: 發言、EventSub 訂閱與確認 bot 的 mod 身分都需要實況主 token，所以 token 失效時全部暫停。
 #: 功能代碼上線後前端與 W-12 都會用，不要改名。
 FEATURES: tuple[Feature, ...] = (
     Feature("speech", chat=True),
@@ -103,6 +104,10 @@ FEATURES: tuple[Feature, ...] = (
         events=("channel points custom reward redemption add", "channel points custom reward redemption update"),
     ),
     Feature("prediction_forward", chat=False, events=("channel prediction end",)),
+    Feature("chat_moderation", chat=True, requires_mod=True),
+    Feature("permit", chat=True, requires_mod=True),
+    Feature("enforcement_lift", chat=False, requires_mod=True),
+    Feature("blocked_terms", chat=False, requires_mod=True),
 )
 
 

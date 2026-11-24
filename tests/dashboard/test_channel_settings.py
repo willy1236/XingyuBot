@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import col, func, select
 
-from starlib import twitch_audit, twitch_tokens
+from starlib import twitch_audit, twitch_moderation, twitch_regulars, twitch_tokens
 from starlib.database import (
     APIType,
     OAuthToken,
@@ -17,14 +17,18 @@ from starlib.database import (
     TwitchBotJoinChannel,
     TwitchChannelAudit,
     TwitchChatCommand,
+    TwitchEnforcementLog,
     TwitchEventResponse,
+    TwitchModerationFilter,
+    TwitchModerationSetting,
     TwitchPoint,
+    TwitchRegular,
     TwitchTimer,
 )
 from starlib.messaging import cache_invalidation
 from starlib.messaging.rpc import RpcHandlerError
 from starlib.twitch_audit import AuditActor, list_changes
-from starServer.dashboard import channel_activation, channel_settings, channels, twitch_control
+from starServer.dashboard import channel_activation, channel_enforcement, channel_settings, channels, twitch_control
 from tests.helpers.dashboard_auth import FRONTEND, make_app, make_twitch_session
 
 pytestmark = pytest.mark.usefixtures("dashboard_env")
@@ -34,7 +38,14 @@ OTHER_ID = 2000000092
 LOGIN = "Host"
 URL = f"/dashboard/channels/{CHANNEL_ID}/delete-data"
 HEADERS = {"Origin": FRONTEND}
-CACHES = ["twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response"]
+CACHES = [
+    "twitch_channel",
+    "twitch_cmd",
+    "twitch_timer",
+    "twitch_event_response",
+    "twitch_moderation",
+    "twitch_regular",
+]
 SEEDED = [1, 1, 1, 1, 1, 1]
 EMPTY = [0, 0, 0, 0, 0, 0]
 
@@ -49,7 +60,15 @@ class Spy:
 @pytest.fixture
 def spy(monkeypatch, repo) -> Spy:
     spy = Spy()
-    for module in (channels, channel_settings, channel_activation, twitch_audit):
+    for module in (
+        channels,
+        channel_settings,
+        channel_activation,
+        channel_enforcement,
+        twitch_audit,
+        twitch_moderation,
+        twitch_regulars,
+    ):
         monkeypatch.setattr(module, "sqldb", repo)
 
     async def sync_channel(twitch_id):
@@ -142,6 +161,19 @@ def _data_counts(repo, twitch_id: int) -> list[int]:
     ]
 
 
+def _moderation_data_counts(repo, twitch_id: int) -> dict[str, int]:
+    return {
+        model.__tablename__: _count(repo, model, model.twitch_id, twitch_id)
+        for model in (TwitchModerationFilter, TwitchModerationSetting, TwitchRegular, TwitchEnforcementLog)
+    }
+
+
+def _get_moderation_data(client, page):
+    response = client.get(f"/dashboard/channels/{CHANNEL_ID}/{page}", headers=HEADERS)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def _row(repo, twitch_id: int = CHANNEL_ID) -> TwitchBotJoinChannel | None:
     return repo.session.get(TwitchBotJoinChannel, twitch_id, populate_existing=True)
 
@@ -209,6 +241,63 @@ def test_刪除後資料清空_頻道列保留顯示欄位(client, spy, repo, cr
     assert row.first_seen_at == datetime(2026, 1, 1, tzinfo=UTC)
 
 
+@pytest.fixture
+def moderation_defaults(client, spy, repo, credential_id):
+    _seed(repo, credential_id, CHANNEL_ID)
+    defaults = _get_moderation_data(client, "moderation")
+    link = next(row for row in defaults["filters"] if row["kind"] == "link")
+    repo.add(
+        TwitchModerationFilter(
+            twitch_id=CHANNEL_ID, kind="link", enabled=True, exempt_level="regular", params=link["params"], silent=False
+        )
+    )
+    repo.add(
+        TwitchModerationSetting(
+            twitch_id=CHANNEL_ID,
+            stages=defaults["settings"]["stages"],
+            strike_reset_minutes=30,
+            raid_pause_seconds=90,
+            permit_seconds=45,
+        )
+    )
+    repo.add(TwitchRegular(twitch_id=CHANNEL_ID, user_id=11, user_login="viewer", user_name="Viewer"))
+    repo.add(
+        TwitchEnforcementLog(
+            twitch_id=CHANNEL_ID,
+            user_id=22,
+            user_login="chatter",
+            user_name="Chatter",
+            filter="link",
+            strike=1,
+            action="delete",
+            message="https://example.invalid",
+            status="success",
+        )
+    )
+    return defaults
+
+
+def test_刪除聊天室管理資料後重新啟用從空白開始(client, repo, moderation_defaults):
+    seeded = _moderation_data_counts(repo, CHANNEL_ID)
+    assert set(seeded.values()) == {1}
+    response = delete(client)
+
+    assert response.status_code == 200, response.text
+    assert _state(repo) == "inactive"
+    assert _moderation_data_counts(repo, CHANNEL_ID) == dict.fromkeys(seeded, 0)
+
+    # 授權流程已有獨立測試，這裡直接將測試頻道恢復為已啟用。
+    row = _row(repo)
+    assert row is not None
+    row.state = "enabled"
+    repo.merge(row)
+    moderation = _get_moderation_data(client, "moderation")
+    assert moderation == moderation_defaults
+    assert all(item["enabled"] is False for item in moderation["filters"])
+    assert _get_moderation_data(client, "regulars")["regulars"] == []
+    assert _get_moderation_data(client, "enforcement")["entries"] == []
+
+
 def test_不影響其他頻道的資料(client, spy, repo, credential_id):
     _seed(repo, credential_id, CHANNEL_ID)
     _seed(repo, credential_id, OTHER_ID)
@@ -221,17 +310,23 @@ def test_不影響其他頻道的資料(client, spy, repo, credential_id):
     assert (other.state, other.action_channel_id, other.action_guild_id, other.point_name) == ("enabled", 99, 88, "pt")
 
 
-def test_修改紀錄保留(client, spy, repo, credential_id):
-    _seed(repo, credential_id, CHANNEL_ID)
+def test_修改紀錄保留(client, repo, moderation_defaults):
     actor = AuditActor("twitch", str(CHANNEL_ID), "Host")
     twitch_audit.record_change(CHANNEL_ID, actor, "dashboard", "command", "hi", "create", None, {"response": "hello"})
+    twitch_audit.record_change(CHANNEL_ID, actor, "dashboard", "moderation", "link", "update", None, {"enabled": True})
+    twitch_audit.record_change(CHANNEL_ID, actor, "dashboard", "regular", "11", "create", None, {"login": "viewer"})
     repo.commit()
 
-    delete(client)
+    assert delete(client).status_code == 200
 
     entries = list_changes(CHANNEL_ID)
-    assert [(e.target_kind, e.target_key) for e in entries] == [("channel", "all_data"), ("command", "hi")]
-    assert _count(repo, TwitchChannelAudit, TwitchChannelAudit.twitch_id, CHANNEL_ID) == 2
+    assert {(e.target_kind, e.target_key) for e in entries} == {
+        ("channel", "all_data"),
+        ("command", "hi"),
+        ("moderation", "link"),
+        ("regular", "11"),
+    }
+    assert _count(repo, TwitchChannelAudit, TwitchChannelAudit.twitch_id, CHANNEL_ID) == 4
 
 
 def test_刪除本身記一筆頻道層級的紀錄(client, spy, repo, credential_id):
@@ -284,7 +379,7 @@ def test_讓_bot_離開並通知所有快取(client, spy, repo, credential_id):
     delete(client)
 
     assert spy.sync_calls == [CHANNEL_ID]
-    assert spy.invalidated == [(cache, str(CHANNEL_ID)) for cache in CACHES]
+    assert sorted(spy.invalidated) == sorted((cache, str(CHANNEL_ID)) for cache in CACHES)
 
 
 @pytest.mark.parametrize("state", ["inactive", "disabled", "enabled"])

@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from starlib import twitch_audit, twitch_commands
-from starlib.database import TwitchBotJoinChannel
+from starlib.database import TwitchBotJoinChannel, TwitchChatCommand
 from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import list_changes
 from starServer.dashboard import channels, twitch_control
@@ -93,7 +93,49 @@ def test_清單只有自己的頻道且依名稱排序(client, repo):
     r = client.get(URL)
     assert r.status_code == 200
     assert [c["name"] for c in r.json()["commands"]] == ["a", "b"]
-    assert set(r.json()["commands"][0]) == {*values(), "use_count", "updated_at"}
+    assert set(r.json()["commands"][0]) == {*values(), "use_count", "updated_at", "builtin_conflict"}
+    assert r.json()["commands"][0]["builtin_conflict"] is None
+
+
+@pytest.mark.parametrize(
+    ("name", "conflict"),
+    [
+        ("oldcommand", {"renamed_from": "uptime", "removed_aliases": []}),
+        ("hi", {"renamed_from": None, "removed_aliases": ["title"]}),
+    ],
+    ids=["renamed", "alias-removed"],
+)
+def test_清單回傳上線時記下的內建指令衝突(client, repo, name, conflict):
+    repo.add(TwitchChatCommand(twitch_id=CHANNEL_ID, name=name, response="hello", builtin_conflict=conflict))
+
+    response = client.get(URL)
+    assert response.status_code == 200
+    [listed] = response.json()["commands"]
+    assert listed["name"] == name
+    assert listed.get("builtin_conflict") == conflict
+
+
+def test_後台儲存被改名的指令後清單清除改名提示(client, repo):
+    conflict = {"renamed_from": "uptime", "removed_aliases": []}
+    repo.add(TwitchChatCommand(twitch_id=CHANNEL_ID, name="oldcommand", response="hello", builtin_conflict=conflict))
+    [before] = client.get(URL).json()["commands"]
+    assert before.get("builtin_conflict") == conflict
+
+    response = put(client, "oldcommand", values(name="oldcommand", response="updated"), original_of(before))
+    assert response.status_code == 200
+    [after] = client.get(URL).json()["commands"]
+    assert after["response"] == "updated"
+    assert after["builtin_conflict"] is None
+
+
+@pytest.mark.parametrize("name", ["title", "permit", "regular"])
+def test_後台拒絕與新內建指令同名的自訂指令(client, name):
+    response = post(client, name=name)
+    assert response.status_code == 400, response.json()
+    body = response.json()
+    assert (body["error"], body["field"]) == ("invalid_field", "name")
+    assert "內建指令" in body["reason"]
+    assert client.get(URL).json()["commands"] == []
 
 
 def test_其他頻道的指令端點是_403(client):

@@ -18,7 +18,7 @@ from starlib import twitch_tokens
 from starlib.database import APIType, TwitchBotJoinChannel, sqldb
 from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_tokens import TokenInvalid
-from starServer.twitch_bot import events, state
+from starServer.twitch_bot import events, moderation, state
 
 log = logging.getLogger(__name__)
 
@@ -133,6 +133,69 @@ _pending: dict[int, int] = {}
 _client_id: str | None = None
 
 
+@dataclass
+class _ModState:
+    is_mod: bool | None = None
+    version: int = 0
+    next_check: float | None = None
+    refresh: asyncio.Task[None] | None = None
+
+
+# 跟聊天室同步及執法一樣，由 Chat loop 管理。
+_mod_states: dict[int, _ModState] = {}
+_MOD_RECHECK_SECONDS = 60
+
+
+def mod_state(twitch_id: int) -> bool | None:
+    """已知的 mod 狀態，查詢前或一直查不到時為 None。"""
+    cached = _mod_states.get(twitch_id)
+    return cached.is_mod if cached is not None else None
+
+
+def mark_not_mod(twitch_id: int) -> None:
+    """Helix 拒絕 mod 操作時停止執法，作廢仍在途中的權限查詢。"""
+    loop = getattr(state, "loop", None)
+    if loop is not None and loop is not asyncio.get_running_loop() and loop.is_running():
+        loop.call_soon_threadsafe(mark_not_mod, twitch_id)
+        return
+    cached = _mod_states.setdefault(twitch_id, _ModState())
+    cached.version += 1
+    cached.is_mod = False
+
+
+async def _query_mod_state(twitch_id: int, cached: _ModState) -> bool | None:
+    cached.version += 1
+    version = cached.version
+    result = await bot_is_mod(twitch_id)
+    if cached.version == version and result is not None:
+        cached.is_mod = result
+    return result
+
+
+async def _refresh_mod_state(twitch_id: int, cached: _ModState) -> None:
+    try:
+        await _query_mod_state(twitch_id, cached)
+    except Exception:
+        log.exception("頻道 %s 的 mod 狀態重查失敗", twitch_id)
+
+
+def refresh_mod_state_if_due(twitch_id: int, now: float) -> None:
+    """有聊天室訊息時，每頻道每 60 秒最多啟動一次背景重查。"""
+    cached = _mod_states.get(twitch_id)
+    if cached is None:
+        cached = _mod_states[twitch_id] = _ModState()
+    if cached.next_check is None and cached.is_mod is None:
+        # 等第一個重查週期，讓進房時排入背景的訂閱同步先查權限。
+        cached.next_check = now + _MOD_RECHECK_SECONDS
+        return
+    if cached.next_check is not None and now < cached.next_check:
+        return
+    if cached.refresh is not None and not cached.refresh.done():
+        return
+    cached.next_check = now + _MOD_RECHECK_SECONDS
+    cached.refresh = asyncio.create_task(_refresh_mod_state(twitch_id, cached))
+
+
 def _lock(locks: dict[int, asyncio.Lock], twitch_id: int) -> asyncio.Lock:
     return locks.setdefault(twitch_id, asyncio.Lock())
 
@@ -152,6 +215,7 @@ async def on_ready(ready_event: EventData) -> None:
         _room_locks.clear()
         _subscription_locks.clear()
         _pending.clear()
+        _mod_states.clear()
     state.loop = loop
     if restarted and _registered:
         register()
@@ -252,6 +316,8 @@ async def _sync_room(twitch_id: int) -> bool:
     async with _lock(_room_locks, twitch_id):
         row = await reload_channel(twitch_id)
         enabled = row is not None and row.state == "enabled"
+        if not enabled:
+            moderation.forget_channel(twitch_id)
         try:
             joined = await asyncio.wait_for(_join(twitch_id) if enabled else _leave(twitch_id, row), ROOM_TIMEOUT)
         except TimeoutError:
@@ -308,12 +374,14 @@ async def reconcile_subscriptions(twitch_id: int) -> None:
     """讓頻道的 EventSub 符合資料庫現況：非 enabled 就全部取消，enabled 就依 bot 的 mod 狀態補訂或退訂。"""
     row = state.join_channels.get(twitch_id)
     if row is None or row.state != "enabled":
+        _mod_states.pop(twitch_id, None)
         await unsubscribe_channel(twitch_id)
         return
     user = await _get_user(twitch_id)
     if user is None:
         return
-    is_mod = await bot_is_mod(twitch_id)
+    cached = _mod_states.setdefault(twitch_id, _ModState())
+    is_mod = await _query_mod_state(twitch_id, cached)
     if is_mod is None:
         # 暫時查不到：維持現有的訂閱，不因為一次失敗退訂
         subs = subscriptions.get(twitch_id)

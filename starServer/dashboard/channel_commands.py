@@ -59,6 +59,7 @@ def _json(row: TwitchChatCommand) -> dict[str, Any]:
         **twitch_commands.snapshot(row),
         "use_count": row.use_count,
         "updated_at": row.updated_at.isoformat(),
+        "builtin_conflict": row.builtin_conflict,
     }
 
 

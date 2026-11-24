@@ -12,10 +12,11 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Literal
 
-from twitchAPI.chat import ChatMessage
+from twitchAPI.chat import ChatMessage, EventData
 from twitchAPI.helper import first
 
 from starlib.database import sqldb
+from starlib.messaging import cache_invalidation
 from starlib.twitch_speech_check import check_text, substitute, uses_viewer_input, variables_used
 from starServer.twitch_bot import state
 
@@ -65,6 +66,7 @@ class SpeechContext:
     stream: StreamInfo | None = None
     channel_info: ChannelInfo | None = None
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
+    stream_lookup_failed: bool = False
 
 
 # ── 開台資訊 ──────────────────────────────────────────────
@@ -105,20 +107,45 @@ async def _resolve_stream(twitch_id: int) -> StreamInfo | None:
 # ── 分類與標題 ────────────────────────────────────────────
 
 _channel_info: dict[int, tuple[float, ChannelInfo]] = {}
+_channel_info_pending: dict[int, object] = {}
 
 
 async def _resolve_channel_info(twitch_id: int) -> ChannelInfo | None:
     cached = _channel_info.get(twitch_id)
     if cached is not None and time.monotonic() - cached[0] < CHANNEL_INFO_TTL:
         return cached[1]
+    marker = _channel_info_pending[twitch_id] = object()
     try:
         [result, *_] = await state.twitch.get_channel_information(str(twitch_id))
+        info = ChannelInfo(result.game_name, result.title)
+        if _channel_info_pending.get(twitch_id) is marker:
+            _channel_info[twitch_id] = (time.monotonic(), info)
+        return info
     except Exception:
         log.warning("查詢 %s 的頻道資訊失敗", twitch_id, exc_info=True)
-        return cached[1] if cached else None
-    info = ChannelInfo(result.game_name, result.title)
-    _channel_info[twitch_id] = (time.monotonic(), info)
-    return info
+        fallback = _channel_info.get(twitch_id)
+        return fallback[1] if fallback else None
+    finally:
+        if _channel_info_pending.get(twitch_id) is marker:
+            _channel_info_pending.pop(twitch_id, None)
+
+
+def forget_channel_info(twitch_id: int) -> None:
+    """頻道的標題或分類剛被改過，丟掉 `{game}`、`{title}` 的快取。"""
+    _channel_info.pop(twitch_id, None)
+    _channel_info_pending.pop(twitch_id, None)
+
+
+async def _on_stream_info_invalidated(key: str | None) -> None:
+    if key is None:
+        _channel_info.clear()
+        _channel_info_pending.clear()
+    else:
+        forget_channel_info(int(key))
+
+
+async def on_ready(_: EventData) -> None:
+    cache_invalidation.on_invalidate("twitch_stream_info", _on_stream_info_invalidated, asyncio.get_running_loop())
 
 
 # ── 代入 ──────────────────────────────────────────────────
@@ -137,7 +164,7 @@ def _uptime(stream: StreamInfo | None, now: datetime) -> str:
 def _values(ctx: SpeechContext) -> dict[str, str]:
     values = dict(ctx.event)
     values["channel"] = ctx.channel
-    values["uptime"] = _uptime(ctx.stream, ctx.now)
+    values["uptime"] = UNKNOWN if ctx.stream_lookup_failed else _uptime(ctx.stream, ctx.now)
     values["game"] = ctx.channel_info.game if ctx.channel_info else UNKNOWN
     values["title"] = ctx.channel_info.title if ctx.channel_info else UNKNOWN
     if ctx.user is not None:
@@ -163,6 +190,7 @@ async def prepare(template: str, ctx: SpeechContext) -> SpeechContext:
     used = variables_used(template)
     if "uptime" in used and ctx.stream is None:
         ctx.stream = await _resolve_stream(ctx.twitch_id)
+        ctx.stream_lookup_failed = ctx.stream is None and ctx.twitch_id not in _live
     if used & {"game", "title"} and ctx.channel_info is None:
         ctx.channel_info = await _resolve_channel_info(ctx.twitch_id)
     return ctx
@@ -174,7 +202,8 @@ async def prepare(template: str, ctx: SpeechContext) -> SpeechContext:
 _check_cache: dict[tuple[int, str], tuple[float, bool]] = {}
 
 
-async def _check(twitch_id: int, text: str) -> Literal["ok", "blocked", "unavailable"]:
+async def check(twitch_id: int, text: str) -> Literal["ok", "blocked", "unavailable"]:
+    """頻道 AutoMod 對一段文字的判定（含快取）；`say` 與直接發言的指令共用。"""
     key = (twitch_id, text)
     cached = _check_cache.get(key)
     if cached is not None and time.monotonic() - cached[0] < CHECK_TTL:
@@ -217,7 +246,7 @@ async def say(
         if not text.strip():
             return False
         if uses_viewer_input(template):
-            result = await _check(twitch_id, text)
+            result = await check(twitch_id, text)
             if result != "ok":
                 reason = "automod" if result == "blocked" else "check_failed"
                 await asyncio.to_thread(_write_block, twitch_id, source_kind, source_key, text, reason)

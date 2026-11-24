@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from twitchAPI.chat import ChatEvent, ChatSub, EventData, JoinedEvent, LeftEvent, NoticeEvent, WhisperEvent
 from twitchAPI.helper import first
 from twitchAPI.object import eventsub
+from twitchAPI.type import TwitchAPIException
 
 from starlib import twitch_event_responses
 from starlib.database import sqldb
@@ -25,7 +26,7 @@ from starlib.messaging.events.twitch_activity import (
 from starlib.messaging.events.twitch_follow import TwitchFollowEvent
 from starlib.messaging.events.twitch_stream import TwitchStreamOfflineEvent, TwitchStreamOnlineEvent
 from starlib.twitch_event_responses import EventResponse
-from starServer.twitch_bot import speech, state, timers
+from starServer.twitch_bot import moderation, speech, state, timers
 
 log = logging.getLogger(__name__)
 
@@ -160,11 +161,15 @@ async def on_stream_online(event: eventsub.StreamOnlineEvent):
     await timers.on_stream_online(int(event.event.broadcaster_user_id))
     # stream.online 會在開台後數秒內送達，此時 Helix streams API 可能還查不到直播，稍等重試
     live = None
-    for _ in range(3):
-        live = await first(state.twitch.get_streams(user_id=[event.event.broadcaster_user_id]))
+    for retries_left in reversed(range(3)):
+        try:
+            live = await first(state.twitch.get_streams(user_id=[event.event.broadcaster_user_id]))
+        except TwitchAPIException as exc:
+            log.warning("%s 的開台資訊查詢失敗：%s", event.event.broadcaster_user_name, exc)
         if live:
             break
-        await asyncio.sleep(10)
+        if retries_left:
+            await asyncio.sleep(10)
     if live is None:
         log.warning("%s 開台但查不到直播資訊，略過開台通知", event.event.broadcaster_user_name)
         return
@@ -259,9 +264,15 @@ async def on_channel_raid(event: eventsub.ChannelRaidEvent):
         event.event.to_broadcaster_user_name,
     )
 
+    twitch_id = int(event.event.to_broadcaster_user_id)
+    try:
+        await moderation.on_raid(twitch_id)
+    except Exception:
+        log.exception("%s 的 Raid 暫停過濾失敗", twitch_id)
+
     await _respond(
         "raid",
-        int(event.event.to_broadcaster_user_id),
+        twitch_id,
         event.event.to_broadcaster_user_login,
         event.event.to_broadcaster_user_name,
         user=event.event.from_broadcaster_user_name,
