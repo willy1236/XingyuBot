@@ -390,7 +390,7 @@ COMMIT;
 
 **依賴**：C-02（執法紀錄的寫入）、C-01（加入常客）
 
-**進度**：進行中。`_call` 接受任意 payload `cc360a42`；Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC、Helix 解除處罰的狀態碼檢查（`helix.py` 對 DELETE moderation/bans 的非 2xx 拋 `TwitchStatusError`，429 不會被當成成功）與 `docs/messaging-contract.md`（本 commit）。RPC 在 `twitch_chatbot.run()` 設定階段以 `moderation.register` 先綁當下 loop，Chat READY 再綁到 Chat loop。續做後台 `starServer/dashboard/channel_enforcement.py`（列表、lift、clear-strikes、regular）與 starlib 查詢，之後營運入口、30 天清除、前端。
+**進度**：進行中。`_call` 接受任意 payload `cc360a42`；Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC 與 Helix 解除處罰的狀態碼檢查（429 與其他非 2xx 拋錯）`53d82ff6`；後台執法紀錄端點與 `starlib/twitch_enforcement.py`（本 commit）。Twitch 呼叫失敗回 502 `twitch_failed`，與 503 `bot_offline` 都不寫 `lifted_at`、可重試。續做營運入口 `ops.py` 的 `GET /channels/{id}/enforcement`、30 天清除（`purge_expired` 掛 Discord bot 的 scheduler）、前端。
 
 ### C-07 實況主與 mod 能在後台管理 Twitch Blocked Terms
 
