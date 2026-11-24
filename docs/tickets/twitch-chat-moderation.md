@@ -127,7 +127,7 @@ BEGIN
     FOR conflicted IN
         SELECT twitch_id, name, aliases
         FROM stardb_basic.twitch_chat_command
-        WHERE name = ANY(reserved_names) OR aliases && reserved_names::varchar[]
+        WHERE name = ANY(reserved_names) OR aliases::text[] && reserved_names
         ORDER BY twitch_id, name
     LOOP
         renamed_from := NULL;
