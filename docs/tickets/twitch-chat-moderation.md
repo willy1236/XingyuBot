@@ -54,7 +54,7 @@ flowchart LR
 | 4 | C-03 | 實作完成 | 實況主能開啟其餘 7 種過濾器 | C-02 | — | |
 | 5 | C-04 | 實作完成 | 實況主能自訂處罰階段與犯規次數歸零時間 | C-02 | — | 與 C-03 改同一份設定與頁面 |
 | 6 | C-05 | 實作完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
-| 7 | C-06 | 進行中 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
+| 7 | C-06 | 實作完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 未完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 未完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | |
 | 10 | C-09 | 未完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
@@ -390,7 +390,7 @@ COMMIT;
 
 **依賴**：C-02（執法紀錄的寫入）、C-01（加入常客）
 
-**進度**：進行中。`_call` 接受任意 payload `cc360a42`；Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC 與 Helix 解除處罰的狀態碼檢查（429 與其他非 2xx 拋錯）`53d82ff6`；後台執法紀錄端點與 `starlib/twitch_enforcement.py` `570766d4`；營運入口 `GET /dashboard/ops/channels/{id}/enforcement`（本 commit，列表查詢收 session 參數，因營運入口既有測試只替身 `ops` 的 `sqldb`）。Twitch 呼叫失敗回 502 `twitch_failed`，與 503 `bot_offline` 都不寫 `lifted_at`、可重試。30 天清除：`purge_expired` 由 Discord bot 的 scheduler 每日 04:10 執行（`starDiscord/cmds/task.py`，本 commit；Twitch bot 沒有 scheduler，經 coordinator 同意），查詢本身也只回 30 天內。後端完成，續做前端：`app/dashboard/twitch/[id]/enforcement/page.tsx`、`components/dashboard/channel/enforcement-list.tsx`、`CHANNEL_NAV`／`ChannelSectionKey`、營運入口頻道頁區塊。
+**進度**：實作完成。後端：`_call` 接受任意 payload `cc360a42`；`moderation.lift`／`moderation.clear_strikes` RPC 與 Helix 解除處罰的狀態碼檢查（400→`not_punished`、403→`not_mod`，429 與其他非 2xx 拋錯，不寫 `lifted_at`）`53d82ff6`；後台端點與 `starlib/twitch_enforcement.py` `570766d4`；營運入口 `17204d9d`；每日 04:10 在 Discord bot scheduler 清除超過 30 天的紀錄 `ed92b8a9`。前端：執法紀錄頁與處置 `9c7437b`、營運入口區塊 `604d842`。驗收測試 `tests/twitch/test_moderation_enforcement_rpc.py` 的 lift 測試經 coordinator 修正（`30e5f7ca`）。無需 ALTER（`lifted_at` 已在 C-02 的資料表）。Twitch 呼叫失敗回 502 `twitch_failed`、bot 離線回 503 `bot_offline`，兩者都可重試。續做 coordinator 審查與 Twitch 實機確認（Helix unban 的 400／403／429 實際回應、解除後觀眾可發言）。
 
 ### C-07 實況主與 mod 能在後台管理 Twitch Blocked Terms
 
