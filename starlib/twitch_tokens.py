@@ -65,6 +65,12 @@ def has_stream_info_scope(token: OAuthToken | None) -> bool:
     return set(STREAM_INFO_SCOPES) <= granted
 
 
+def stream_info_granted(twitch_id: int) -> bool:
+    """實況主的 DB token 是否已授權改標題與分類。同步函式，要在 worker thread 上呼叫。"""
+    client = sqldb.get_oauth_client(APIType.Twitch, BROADCASTER_CLIENT_SEQ)
+    return has_stream_info_scope(sqldb.get_oauth_token(str(twitch_id), client.credential_id))
+
+
 def token_state(token: OAuthToken | None) -> TokenState:
     """只看 DB 判定實況主 token 的狀態，不對 Twitch 發請求；access token 過期是正常狀態（用到才續期），不算問題。
 

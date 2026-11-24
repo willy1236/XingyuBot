@@ -57,7 +57,7 @@ flowchart LR
 | 7 | C-06 | 實作完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 實作完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 實作完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | 待 coordinator 審查與 Twitch 實機確認 |
-| 10 | C-09 | 未完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
+| 10 | C-09 | 進行中 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
 | 11 | C-10 | 未完成 | bot 不是 mod 時，後台列出暫停的聊天室管理功能 | C-06、C-07 | — | |
 | 12 | C-11 | 未完成 | 刪除所有資料時一併清除聊天室管理資料 | C-01、C-02 | — | |
 
@@ -472,7 +472,7 @@ COMMIT;
 
 **依賴**：C-08（`STREAM_INFO_SCOPES` 與啟用流程的權限）
 
-**進度**：未完成
+**進度**：進行中。已完成：`twitch_tokens.stream_info_granted`（從 C-08 的 bot 抽出，bot 與後台共用）。無需 ALTER。續做：`starServer/dashboard/channel_stream_info.py`（GET／categories／PUT，修改紀錄單一筆 target_key `stream`，before／after `{title, game, game_id}`，兩者都沒變不寫），再做前端。
 
 ### C-10 bot 不是 mod 時，後台列出暫停的聊天室管理功能
 

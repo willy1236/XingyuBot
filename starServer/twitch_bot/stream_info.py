@@ -12,7 +12,7 @@ from twitchAPI.chat import ChatCommand
 from twitchAPI.type import AuthScope
 
 from starlib import twitch_speech_check, twitch_tokens
-from starlib.database import APIType, sqldb
+from starlib.database import sqldb
 from starlib.twitch_audit import AuditActor, record_change
 from starlib.twitch_tokens import TokenInvalid
 from starServer.twitch_bot import commands, speech, state
@@ -115,7 +115,7 @@ async def _authorize(cmd: ChatCommand, twitch_id: int) -> str | None:
     """修改前的檢查：實況主或 mod、頻道已啟用、token 有改標題的權限。通過回實況主 token，否則已回覆原因、回 None。"""
     if not await commands.may_manage(cmd, _WHAT, reply_viewer=True):
         return None
-    if not await _db(_granted, twitch_id):
+    if not await _db(twitch_tokens.stream_info_granted, twitch_id):
         await cmd.reply(_NEED_REAUTH)
         return None
     token = await twitch_tokens.broadcaster_token(twitch_id)
@@ -123,12 +123,6 @@ async def _authorize(cmd: ChatCommand, twitch_id: int) -> str | None:
         await cmd.reply(_FAILED if token.reason == "unavailable" else _NEED_REAUTH)
         return None
     return token
-
-
-def _granted(twitch_id: int) -> bool:
-    client = sqldb.get_oauth_client(APIType.Twitch, twitch_tokens.BROADCASTER_CLIENT_SEQ)
-    token = sqldb.get_oauth_token(str(twitch_id), client.credential_id)
-    return twitch_tokens.has_stream_info_scope(token)
 
 
 async def _patch(twitch_id: int, token: str, **fields: str) -> bool:
