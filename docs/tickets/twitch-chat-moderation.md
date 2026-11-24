@@ -57,7 +57,7 @@ flowchart LR
 | 7 | C-06 | 實作完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
 | 8 | C-07 | 實作完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 實作完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | 待 coordinator 審查與 Twitch 實機確認 |
-| 10 | C-09 | 進行中 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
+| 10 | C-09 | 實作完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
 | 11 | C-10 | 未完成 | bot 不是 mod 時，後台列出暫停的聊天室管理功能 | C-06、C-07 | — | |
 | 12 | C-11 | 未完成 | 刪除所有資料時一併清除聊天室管理資料 | C-01、C-02 | — | |
 
@@ -472,7 +472,7 @@ COMMIT;
 
 **依賴**：C-08（`STREAM_INFO_SCOPES` 與啟用流程的權限）
 
-**進度**：進行中。後端完成：`twitch_tokens.stream_info_granted`（從 C-08 的 bot 抽出，bot 與後台共用）`97795720`；`starServer/dashboard/channel_stream_info.py` 的 GET／categories／PUT 與 `starlib/twitch_stream_info.py` 修改紀錄（單一筆、target_key `stream`、before／after `{title, game, game_id}`，兩者都沒變不呼叫 Helix 也不寫；PUT 成功回 204；Twitch 失敗 502 `twitch_failed`，token 失效 409 `scope_missing`；web 直打 Helix，沒有 bot_offline）本次 commit。無需 ALTER。續做：前端 `CHANNEL_NAV`、`stream/page.tsx`、`stream-info-form.tsx`（domalyze_frontend）。
+**進度**：實作完成。後端：`twitch_tokens.stream_info_granted`（從 C-08 的 bot 抽出，bot 與後台共用）`97795720`；`channel_stream_info.py` 的 GET／categories／PUT 與 `starlib/twitch_stream_info.py` 修改紀錄 `36afb75f`（web 直打 Helix 無 bot_offline；PUT 成功回 204；Twitch 失敗 502 `twitch_failed`，token 失效 409 `scope_missing`；修改紀錄單一筆、target_key `stream`、before／after `{title, game, game_id}`，兩者都沒變不呼叫 Helix 也不寫；標題上限 140，超過回 400）。前端：導覽「實況資訊」`0331fd4`、實況資訊頁與表單 `9536ee3`。無需 ALTER。續做 coordinator 審查與 Twitch 實機確認（Helix PATCH 實際生效、既有頻道缺權限時的 can_edit、重新授權後可修改）。
 
 ### C-10 bot 不是 mod 時，後台列出暫停的聊天室管理功能
 
