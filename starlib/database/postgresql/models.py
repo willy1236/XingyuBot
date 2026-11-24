@@ -562,6 +562,63 @@ class TwitchRegular(BasicSchema, table=True):
     )
 
 
+class TwitchModerationFilter(BasicSchema, table=True):
+    """單一頻道的過濾器設定。沒有列時使用程式預設值。"""
+
+    __tablename__ = "twitch_moderation_filter"
+
+    twitch_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    kind: str = Field(primary_key=True)
+    enabled: bool = Field(nullable=False)
+    exempt_level: str = Field(nullable=False)
+    params: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+    stages: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSONB(none_as_null=True)))
+    notice: str | None = Field(default=None, sa_column=Column(Text))
+    silent: bool = Field(nullable=False)
+    updated_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
+class TwitchModerationSetting(BasicSchema, table=True):
+    """頻道共用的執法設定。"""
+
+    __tablename__ = "twitch_moderation_setting"
+
+    twitch_id: int = Field(sa_column=Column(BigInteger, primary_key=True, autoincrement=False))
+    stages: list[dict[str, Any]] = Field(sa_column=Column(JSONB, nullable=False))
+    strike_reset_minutes: int = Field(nullable=False)
+    raid_pause_seconds: int = Field(nullable=False)
+    permit_seconds: int = Field(nullable=False)
+    updated_at: datetime = Field(
+        default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False, server_default=text("now()"))
+    )
+
+
+class TwitchEnforcementLog(BasicSchema, table=True):
+    """聊天室過濾器每次嘗試的處罰，包括失敗的嘗試。"""
+
+    __tablename__ = "twitch_enforcement_log"
+    __table_args__ = (
+        Index("ix_twitch_enforcement_log_twitch_id_at", "twitch_id", "at"),
+        {**BasicSchema.__table_args__},
+    )
+
+    id: int | None = Field(default=None, sa_column=Column(BigInteger, Identity(), primary_key=True))
+    twitch_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    at: datetime = Field(default_factory=nowtz, sa_column=Column(TIMESTAMP(True, 0), nullable=False))
+    user_id: int = Field(sa_column=Column(BigInteger, nullable=False))
+    user_login: str = Field(nullable=False)
+    user_name: str = Field(nullable=False)
+    filter: str = Field(nullable=False)
+    strike: int = Field(nullable=False)
+    action: str = Field(nullable=False)
+    duration: int | None = Field(default=None)
+    message: str = Field(sa_column=Column(Text, nullable=False))
+    status: str = Field(nullable=False)
+    lifted_at: datetime | None = Field(default=None, sa_column=Column(TIMESTAMP(True, 0)))
+
+
 class TwitchEventResponse(BasicSchema, table=True):
     """事件回應（W-07）；沒有資料列時視為開啟並使用程式碼裡的預設文字"""
 
