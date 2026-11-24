@@ -19,6 +19,16 @@ def test_moderation_list_limit_returns_422_and_field_hint(host, kind, key, overs
     assert "100 字" in response.json()["reason"]
 
 
+def test_wildcard_only_blocked_word_returns_422_and_words_field(host):
+    (row,) = (entry for entry in settings(host)["filters"] if entry["kind"] == "blocked_word")
+    original = {name: row[name] for name in EDITABLE}
+
+    response = put_filter(host, {"params": {"words": ["* *"]}}, kind="blocked_word", original=original)
+
+    assert response.status_code == 422
+    assert response.json() == {"error": "invalid_field", "field": "words", "reason": "每個禁字至少需要一個非萬用字元"}
+
+
 @pytest.mark.parametrize(("kind", "key"), [("link", "whitelist"), ("blocked_word", "words")])
 def test_moderation_list_accepts_exactly_100_entries_of_100_characters(host, kind, key):
     (row,) = (entry for entry in settings(host)["filters"] if entry["kind"] == kind)

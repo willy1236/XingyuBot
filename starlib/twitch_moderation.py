@@ -451,7 +451,7 @@ def validate_filter(kind: str, values: FilterValues) -> FilterValues:
                 raise InvalidField("params", "禁字必須是文字清單")
             _validate_list_limits(words, "words", "禁字清單")
             if any(word.strip() and not word.replace("*", "").strip() for word in words):
-                raise InvalidField("params", "每個禁字至少需要一個非萬用字元")
+                raise InvalidField("words", "每個禁字至少需要一個非萬用字元")
             validated = {"words": list(dict.fromkeys(word.strip() for word in words if word.strip()))}
         case _:
             validated = {}
