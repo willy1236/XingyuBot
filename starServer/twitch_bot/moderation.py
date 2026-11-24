@@ -319,7 +319,7 @@ async def check(msg: ChatMessage) -> bool:
 async def permit(cmd: ChatCommand) -> None:
     from starServer.twitch_bot.commands import may_manage
 
-    if not await may_manage(cmd, "放行連結", reply_viewer=True) or cmd.room is None:
+    if not await may_manage(cmd, "放行連結") or cmd.room is None:
         return
     arguments = cmd.parameter.split()
     if len(arguments) != 1 or arguments[0] == "@":
