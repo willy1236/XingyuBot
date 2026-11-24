@@ -551,6 +551,7 @@ def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, v
             dict(before),
             dict(values),
         )
+        session.refresh(row, attribute_names=["updated_at"])
         result = _settings_config(row)
         sqldb.commit()
     except BaseException:
