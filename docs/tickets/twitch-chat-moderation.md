@@ -390,7 +390,7 @@ COMMIT;
 
 **依賴**：C-02（執法紀錄的寫入）、C-01（加入常客）
 
-**進度**：進行中。`_call` 接受任意 payload `cc360a42`；Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC 與 Helix 解除處罰的狀態碼檢查（429 與其他非 2xx 拋錯）`53d82ff6`；後台執法紀錄端點與 `starlib/twitch_enforcement.py` `570766d4`；營運入口 `GET /dashboard/ops/channels/{id}/enforcement`（本 commit，列表查詢收 session 參數，因營運入口既有測試只替身 `ops` 的 `sqldb`）。Twitch 呼叫失敗回 502 `twitch_failed`，與 503 `bot_offline` 都不寫 `lifted_at`、可重試。續做 30 天清除（`purge_expired` 掛 Discord bot 的 scheduler）、前端。
+**進度**：進行中。`_call` 接受任意 payload `cc360a42`；Twitch bot 的 `moderation.lift`／`moderation.clear_strikes` RPC 與 Helix 解除處罰的狀態碼檢查（429 與其他非 2xx 拋錯）`53d82ff6`；後台執法紀錄端點與 `starlib/twitch_enforcement.py` `570766d4`；營運入口 `GET /dashboard/ops/channels/{id}/enforcement`（本 commit，列表查詢收 session 參數，因營運入口既有測試只替身 `ops` 的 `sqldb`）。Twitch 呼叫失敗回 502 `twitch_failed`，與 503 `bot_offline` 都不寫 `lifted_at`、可重試。30 天清除：`purge_expired` 由 Discord bot 的 scheduler 每日 04:10 執行（`starDiscord/cmds/task.py`，本 commit；Twitch bot 沒有 scheduler，經 coordinator 同意），查詢本身也只回 30 天內。後端完成，續做前端：`app/dashboard/twitch/[id]/enforcement/page.tsx`、`components/dashboard/channel/enforcement-list.tsx`、`CHANNEL_NAV`／`ChannelSectionKey`、營運入口頻道頁區塊。
 
 ### C-07 實況主與 mod 能在後台管理 Twitch Blocked Terms
 
