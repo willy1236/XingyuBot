@@ -448,7 +448,7 @@ COMMIT;
 
 **依賴**：C-00（內建指令名稱與既有同名指令改名、`may_manage`、`AuditTarget.stream_info`）
 
-**進度**：實作完成。啟用流程與 `STREAM_INFO_SCOPES`／`has_stream_info_scope` `a8684488`（`test_channel_activation.py` 兩處比對完整 scope 的斷言移到 `test_channel_activation_stream_info.py`，同一行為不重複）；`speech._check` 改公開 `check` `572dcb99`；`starServer/twitch_bot/stream_info.py` 的 `!title`／`!game`／`!uptime`、`twitch_chatbot.py` 註冊、移除 `commands.modify_channel_information` 空殼（本 commit）。查看用 bot 的 Helix client，修改用實況主 token 開臨時 `BotTwitch`（client id 取 `twitch_speech_check.broadcaster_client_id_blocking`，與發 token 的 OAuth client 同源）。標題上限 140 字（Helix 文件）。無需 ALTER。續做 coordinator 審查與 Twitch 實機確認（改標題與分類真的生效、140 字上限、既有頻道缺權限時的回覆、AutoMod 擋下時回覆不含標題）。
+**進度**：實作完成。啟用流程與 `STREAM_INFO_SCOPES`／`has_stream_info_scope` `a8684488`（`test_channel_activation.py` 兩處比對完整 scope 的斷言移到 `test_channel_activation_stream_info.py`，同一行為不重複）；`speech._check` 改公開 `check` `572dcb99`；`starServer/twitch_bot/stream_info.py` 的 `!title`／`!game`／`!uptime`、`twitch_chatbot.py` 註冊、移除 `commands.modify_channel_information` 空殼`e1035c9f`。查看用 bot 的 Helix client，修改用實況主 token 開臨時 `BotTwitch`（client id 取 `twitch_speech_check.broadcaster_client_id_blocking`，與發 token 的 OAuth client 同源）。標題上限 140 字（Helix 文件）。無需 ALTER。續做 coordinator 審查與 Twitch 實機確認（改標題與分類真的生效、140 字上限、既有頻道缺權限時的回覆、AutoMod 擋下時回覆不含標題）。
 
 ### C-09 實況主與 mod 能在後台查看與修改實況資訊
 
