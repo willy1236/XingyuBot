@@ -58,9 +58,12 @@ class StubHelix:
             if "game_id" in params:
                 self.game_id = params["game_id"]
                 self.game_name = next(
-                    (n for found in self.categories.values() for i, n in found if i == self.game_id), self.game_name
+                    (n for i, n in self.games() if i == self.game_id), self.game_name
                 )
             return httpx.Response(204, request=request)
+        if path.endswith("/games"):
+            data = [{"id": i, "name": n} for i, n in self.games() if i == params["id"]]
+            return httpx.Response(200, json={"data": data}, request=request)
         if path.endswith("/search/categories"):
             found = self.categories.get(params["query"], [])
             data = [{"id": i, "name": n, "box_art_url": ""} for i, n in found]
@@ -96,6 +99,9 @@ class StubHelix:
             }
             return httpx.Response(200, json={"data": [channel]}, request=request)
         raise AssertionError(f"沒預期的 Helix 呼叫：{request.method} {path}")
+
+    def games(self):
+        return [OLD_GAME, MINECRAFT, *(game for found in self.categories.values() for game in found)]
 
 
 @pytest.fixture

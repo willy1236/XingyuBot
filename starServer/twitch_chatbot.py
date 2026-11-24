@@ -24,6 +24,7 @@ from starServer.twitch_bot import (
     commands,
     events,
     moderation,
+    speech,
     state,
     stream_info,
     timers,
@@ -138,6 +139,7 @@ async def run():
     chat.register_event(ChatEvent.READY, channels.on_ready)
     chat.register_event(ChatEvent.READY, viewers.on_ready)
     chat.register_event(ChatEvent.READY, moderation.on_ready)
+    chat.register_event(ChatEvent.READY, speech.on_ready)
     chat.register_event(ChatEvent.MESSAGE, commands.on_message)
     chat.register_event(ChatEvent.SUB, events.on_sub)
     chat.register_event(ChatEvent.JOINED, events.on_bot_joined)

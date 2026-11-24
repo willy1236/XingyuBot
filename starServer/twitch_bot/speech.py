@@ -12,10 +12,11 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Literal
 
-from twitchAPI.chat import ChatMessage
+from twitchAPI.chat import ChatMessage, EventData
 from twitchAPI.helper import first
 
 from starlib.database import sqldb
+from starlib.messaging import cache_invalidation
 from starlib.twitch_speech_check import check_text, substitute, uses_viewer_input, variables_used
 from starServer.twitch_bot import state
 
@@ -106,25 +107,45 @@ async def _resolve_stream(twitch_id: int) -> StreamInfo | None:
 # ── 分類與標題 ────────────────────────────────────────────
 
 _channel_info: dict[int, tuple[float, ChannelInfo]] = {}
+_channel_info_pending: dict[int, object] = {}
 
 
 async def _resolve_channel_info(twitch_id: int) -> ChannelInfo | None:
     cached = _channel_info.get(twitch_id)
     if cached is not None and time.monotonic() - cached[0] < CHANNEL_INFO_TTL:
         return cached[1]
+    marker = _channel_info_pending[twitch_id] = object()
     try:
         [result, *_] = await state.twitch.get_channel_information(str(twitch_id))
+        info = ChannelInfo(result.game_name, result.title)
+        if _channel_info_pending.get(twitch_id) is marker:
+            _channel_info[twitch_id] = (time.monotonic(), info)
+        return info
     except Exception:
         log.warning("查詢 %s 的頻道資訊失敗", twitch_id, exc_info=True)
-        return cached[1] if cached else None
-    info = ChannelInfo(result.game_name, result.title)
-    _channel_info[twitch_id] = (time.monotonic(), info)
-    return info
+        fallback = _channel_info.get(twitch_id)
+        return fallback[1] if fallback else None
+    finally:
+        if _channel_info_pending.get(twitch_id) is marker:
+            _channel_info_pending.pop(twitch_id, None)
 
 
 def forget_channel_info(twitch_id: int) -> None:
     """頻道的標題或分類剛被改過，丟掉 `{game}`、`{title}` 的快取。"""
     _channel_info.pop(twitch_id, None)
+    _channel_info_pending.pop(twitch_id, None)
+
+
+async def _on_stream_info_invalidated(key: str | None) -> None:
+    if key is None:
+        _channel_info.clear()
+        _channel_info_pending.clear()
+    else:
+        forget_channel_info(int(key))
+
+
+async def on_ready(_: EventData) -> None:
+    cache_invalidation.on_invalidate("twitch_stream_info", _on_stream_info_invalidated, asyncio.get_running_loop())
 
 
 # ── 代入 ──────────────────────────────────────────────────

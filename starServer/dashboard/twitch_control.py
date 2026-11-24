@@ -17,7 +17,13 @@ from starServer.dashboard.errors import DashboardError
 SERVICE = "twitch"
 
 type CacheName = Literal[
-    "twitch_channel", "twitch_cmd", "twitch_timer", "twitch_event_response", "twitch_regular", "twitch_moderation"
+    "twitch_channel",
+    "twitch_cmd",
+    "twitch_timer",
+    "twitch_event_response",
+    "twitch_regular",
+    "twitch_moderation",
+    "twitch_stream_info",
 ]
 
 

@@ -3,6 +3,8 @@
 import httpx
 import pytest
 
+from starlib.messaging import cache_invalidation
+
 from tests.dashboard.test_channel_stream_info import (  # noqa: F401 (fixtures)
     MINECRAFT,
     NEW_TITLE,
@@ -19,7 +21,7 @@ pytestmark = pytest.mark.usefixtures("dashboard_env")
 
 
 def test_只改標題時只送標題_紀錄只有標題變動(host, twitch):
-    assert save(host, category_id=OLD_GAME[0]).is_success
+    assert host.put("stream-info", json={"title": NEW_TITLE}).is_success
 
     assert twitch.patches() == [{"broadcaster_id": twitch.requests[-2][2]["broadcaster_id"], "title": NEW_TITLE}]
     (entry,) = audit_entries(host)
@@ -27,11 +29,34 @@ def test_只改標題時只送標題_紀錄只有標題變動(host, twitch):
     assert entry["before"]["game_id"] == entry["after"]["game_id"] == OLD_GAME[0]
 
 
+def test_partial_update_accepts_missing_existing_fields_and_skips_post_patch_lookup(host, twitch, channel_id):
+    twitch.game_id = twitch.game_name = ""
+    assert host.put("stream-info", json={"title": NEW_TITLE}).status_code == 204
+    assert [method for method, _, _ in twitch.requests] == ["GET", "PATCH"]
+    cache_invalidation.invalidate.assert_called_once_with("twitch_stream_info", str(channel_id))
+    (entry,) = audit_entries(host)
+    assert entry["target_key"] == "stream"
+    assert entry["after"] == {"title": NEW_TITLE, "game": "", "game_id": ""}
+
+
+def test_partial_category_update_accepts_empty_existing_title(host, twitch):
+    twitch.title = ""
+    assert host.put("stream-info", json={"category_id": MINECRAFT[0]}).status_code == 204
+    assert [method for method, _, _ in twitch.requests] == ["GET", "GET", "PATCH"]
+    assert twitch.title == "" and twitch.game_id == MINECRAFT[0]
+
+
+def test_empty_update_request_is_rejected(host, twitch):
+    assert host.put("stream-info", json={}).status_code == 400
+    assert twitch.requests == []
+
+
 def test_標題與分類都沒變不呼叫修改也不寫紀錄(host, twitch):
     assert save(host, title=OLD_TITLE, category_id=OLD_GAME[0]).is_success
 
     assert twitch.patches() == []
     assert audit_entries(host) == []
+    cache_invalidation.invalidate.assert_not_called()
 
 
 def test_標題超過_140_字回_400_不改_Twitch(host, twitch):
@@ -51,3 +76,4 @@ def test_Twitch_回錯誤時回_502_twitch_failed_不寫紀錄(host, twitch, mon
 
     assert (response.status_code, response.json()["error"]) == (502, "twitch_failed")
     assert audit_entries(host) == []
+    cache_invalidation.invalidate.assert_not_called()

@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from starlib import twitch_stream_info, twitch_tokens
 from starlib.twitch_tokens import TokenInvalid
@@ -29,17 +29,25 @@ TITLE_MAX = 140
 
 
 class StreamInfoBody(BaseModel):
-    title: str = Field(min_length=1, max_length=TITLE_MAX)
-    category_id: str = Field(pattern=r"^\d{1,20}$")
+    title: str | None = Field(default=None, max_length=TITLE_MAX)
+    category_id: str | None = Field(default=None, pattern=r"^(?:[0-9]{1,20})?$")
+
+    @model_validator(mode="after")
+    def require_changes(self):
+        if not self.model_fields_set or any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("至少提供標題或分類")
+        return self
 
 
-async def _credentials(twitch_id: int) -> dict[str, str]:
+async def _credentials(twitch_id: int, *, require_write_scope: bool = False) -> dict[str, str]:
     credentials = await twitch_control.broadcaster_credentials(twitch_id)
     if isinstance(credentials, TokenInvalid):
         if credentials.reason == "unavailable":
             raise DashboardError(502, "twitch_failed")
         raise DashboardError(409, "scope_missing")
     token, client_id = credentials
+    if require_write_scope and not await run_db(lambda: twitch_tokens.stream_info_granted(twitch_id)):
+        raise DashboardError(409, "scope_missing")
     return {"Authorization": f"Bearer {token}", "Client-Id": client_id}
 
 
@@ -90,18 +98,25 @@ async def search_categories(
 async def update_stream_info(
     twitch_id: int, body: StreamInfoBody, access: ChannelAccess = Depends(require_enabled_channel)
 ) -> None:
-    if not await run_db(lambda: twitch_tokens.stream_info_granted(twitch_id)):
-        raise DashboardError(409, "scope_missing")
-    headers = await _credentials(twitch_id)
-    title = body.title.strip()
+    headers = await _credentials(twitch_id, require_write_scope=True)
     before = await _channel(twitch_id, headers)
     changes: dict[str, str] = {}
-    if title != before["title"]:
+    category_name = before["game"]
+    if body.title is not None and (title := body.title.strip()) != before["title"]:
+        if not title:
+            raise DashboardError(400, "invalid_request")
         changes["title"] = title
-    if body.category_id != before["game_id"]:
+    if body.category_id is not None and body.category_id != before["game_id"]:
+        if not body.category_id:
+            raise DashboardError(400, "invalid_request")
+        categories = (await _helix("GET", "/games", headers, params={"id": body.category_id}))["data"]
+        if not categories:
+            raise DashboardError(400, "invalid_request")
+        category_name = categories[0]["name"]
         changes["game_id"] = body.category_id
     if not changes:
         return
     await _helix("PATCH", "/channels", headers, params={"broadcaster_id": str(twitch_id)}, json=changes)
-    after = await _channel(twitch_id, headers)
+    twitch_control.invalidate("twitch_stream_info", twitch_id)
+    after = {**before, **changes, "game": category_name}
     await run_db(lambda: twitch_stream_info.record_updated(twitch_id, access.actor, before, after))

@@ -346,3 +346,4 @@ Twitch bot 以服務名稱 `twitch` 處理請求。後台（web）經它即時�
 | `twitch_event_response` | 事件回應 |
 | `twitch_regular` | 常客名單 |
 | `twitch_moderation` | 聊天室過濾設定 |
+| `twitch_stream_info` | 發言模板的標題與分類 |
