@@ -72,6 +72,12 @@ class _Channel:
         self.config_generation += 1
         self.config = None
 
+    def enforcement_lock(self, user_id: int) -> asyncio.Lock:
+        lock = self.enforcement_locks.get(user_id)
+        if lock is None:
+            lock = self.enforcement_locks[user_id] = asyncio.Lock()
+        return lock
+
     def prune(self, now: float, strike_window: int) -> None:
         if now < self.next_prune:
             return
@@ -245,10 +251,7 @@ async def check(msg: ChatMessage) -> bool:
     runtime = _channels.get(twitch_id)
     if runtime is None:
         runtime = _channels[twitch_id] = _Channel()
-    lock = runtime.enforcement_locks.get(user_id)
-    if lock is None:
-        lock = runtime.enforcement_locks[user_id] = asyncio.Lock()
-    async with lock:
+    async with runtime.enforcement_lock(user_id):
         if _channels.get(twitch_id) is not runtime:
             return False
         config = await _config(twitch_id, runtime)
@@ -369,5 +372,6 @@ async def clear_strikes(payload: dict[str, Any]) -> dict[str, Any]:
     runtime = _channels.get(int(payload["twitch_id"]))
     if runtime is not None:
         user_id = int(payload["user_id"])
-        runtime.strikes = {key: value for key, value in runtime.strikes.items() if key[0] != user_id}
+        async with runtime.enforcement_lock(user_id):
+            runtime.strikes = {key: value for key, value in runtime.strikes.items() if key[0] != user_id}
     return {}
