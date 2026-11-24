@@ -55,7 +55,7 @@ flowchart LR
 | 5 | C-04 | 實作完成 | 實況主能自訂處罰階段與犯規次數歸零時間 | C-02 | — | 與 C-03 改同一份設定與頁面 |
 | 6 | C-05 | 實作完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
 | 7 | C-06 | 實作完成 | 實況主與 mod 能查看執法紀錄並處理誤判 | C-02、C-01 | — | |
-| 8 | C-07 | 進行中 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
+| 8 | C-07 | 實作完成 | 實況主與 mod 能在後台管理 Twitch Blocked Terms | C-02、C-06 | — | 放在聊天室管理頁；用 C-06 擴充的 `_call` |
 | 9 | C-08 | 未完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | |
 | 10 | C-09 | 未完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
 | 11 | C-10 | 未完成 | bot 不是 mod 時，後台列出暫停的聊天室管理功能 | C-06、C-07 | — | |
@@ -415,7 +415,7 @@ COMMIT;
 
 **依賴**：C-02（聊天室管理頁）、C-06（`_call` 擴充）
 
-**進度**：進行中。後端完成：Blocked Terms RPC（`blocked_terms.list`／`add`／`remove`、`helix.py` 補 403 轉換與 read／manage 擇一的 scope）與契約文件 `71bead9c`；後台端點與修改紀錄（not_mod 409 `bot_not_mod`、離線 503 `bot_offline`、其他 Twitch 失敗 502 `twitch_failed`；刪除前先 list 取詞文字寫進 before）本 commit。續做前端 `components/dashboard/channel/blocked-terms.tsx` 並放進 moderation `page.tsx`。無需 ALTER（沿用 `twitch_channel_audit`）。
+**進度**：實作完成。後端：Blocked Terms RPC（`blocked_terms.list`／`add`／`remove`、`helix.py` 補 403 轉換與 read／manage 擇一的 scope）與契約文件 `71bead9c`；後台端點與修改紀錄（not_mod 409 `bot_not_mod`、離線 503 `bot_offline`、其他 Twitch 失敗 502 `twitch_failed`；刪除前先 list 取詞文字寫進 before）`508ee9ea`。前端：聊天室管理頁的 Twitch Blocked Terms 區塊 `775786f`。無需 ALTER（沿用 `twitch_channel_audit`）。bot 不加 `moderator:read:blocked_terms`，Helix 讀取接受 read 或 manage 其一。續做 coordinator 審查與 Twitch 實機確認（只有 manage scope 的正式 bot token 能讀清單、新增的詞被 Twitch 擋下且執法紀錄沒有這筆、創作者後台加的詞重新載入看得到）。
 
 ### C-08 觀眾與 mod 能在聊天室用 !title、!game、!uptime
 
