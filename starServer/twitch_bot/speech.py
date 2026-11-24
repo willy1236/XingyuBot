@@ -121,6 +121,11 @@ async def _resolve_channel_info(twitch_id: int) -> ChannelInfo | None:
     return info
 
 
+def forget_channel_info(twitch_id: int) -> None:
+    """頻道的標題或分類剛被改過，丟掉 `{game}`、`{title}` 的快取。"""
+    _channel_info.pop(twitch_id, None)
+
+
 # ── 代入 ──────────────────────────────────────────────────
 
 

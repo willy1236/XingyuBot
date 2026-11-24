@@ -18,7 +18,17 @@ from twitchAPI.type import (
 from sentry_bootstrap import capture_exception_safe, capture_message_safe
 from starlib import BaseThread
 from starlib.database import APIType, OAuthToken, sqldb
-from starServer.twitch_bot import blocked_terms, channels, commands, events, moderation, state, timers, viewers
+from starServer.twitch_bot import (
+    blocked_terms,
+    channels,
+    commands,
+    events,
+    moderation,
+    state,
+    stream_info,
+    timers,
+    viewers,
+)
 from starServer.twitch_bot.helix import BotTwitch as Twitch
 
 log = logging.getLogger(__name__)
@@ -145,7 +155,9 @@ async def run():
     chat.register_command("permit", moderation.permit)
     moderation.register(asyncio.get_running_loop())
     blocked_terms.register(asyncio.get_running_loop())
-    # TODO: modify_channel_information
+    chat.register_command("title", stream_info.title)
+    chat.register_command("game", stream_info.game)
+    chat.register_command("uptime", stream_info.uptime)
 
     await viewers.load_regulars()
     chat.start()

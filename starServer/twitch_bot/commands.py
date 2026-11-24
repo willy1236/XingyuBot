@@ -306,7 +306,3 @@ async def list_chat_command(cmd: ChatCommand):
             await cmd.reply(f"{command.name}：{command.response}")
         else:
             await cmd.reply(f"{parameters} 不存在")
-
-
-async def modify_channel_information(cmd: ChatCommand):
-    pass
