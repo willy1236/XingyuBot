@@ -332,15 +332,15 @@ async def permit(cmd: ChatCommand) -> None:
 
     if not await may_manage(cmd, "放行連結") or cmd.room is None:
         return
-    argument = cmd.parameter.strip()
-    if argument in ("", "@"):
+    arguments = cmd.parameter.split()
+    if len(arguments) != 1 or arguments[0] == "@":
         await cmd.reply("用法：!permit <使用者>")
         return
     twitch_id = int(cmd.room.room_id)
     runtime = _channels.get(twitch_id)
     if runtime is None:
         runtime = _channels[twitch_id] = _Channel()
-    login = argument.removeprefix("@").lower()
+    login = arguments[0].removeprefix("@").lower()
     try:
         user = await first(state.twitch.get_users(logins=[login])) if twitch_regulars.valid_login(login) else None
     except TwitchAPIException, ClientError, TimeoutError:

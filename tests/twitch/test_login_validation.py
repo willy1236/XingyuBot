@@ -20,8 +20,18 @@ def test_dashboard_rejects_invalid_login_before_helix(monkeypatch, login):
     credentials.assert_not_awaited()
 
 
-@pytest.mark.parametrize(("command", "parameter"), [(moderation.permit, "a b"), (viewers.regular_command, "add @主播")])
-def test_chat_reports_invalid_login_as_not_found(monkeypatch, command, parameter):
+@pytest.mark.parametrize(
+    ("command", "parameter", "reply"),
+    [
+        (moderation.permit, "a b", "用法：!permit <使用者>"),
+        (moderation.permit, "a\tb", "用法：!permit <使用者>"),
+        (viewers.regular_command, "add a b", "用法：!regular add|remove <使用者>"),
+        (viewers.regular_command, "remove a\tb", "用法：!regular add|remove <使用者>"),
+        (moderation.permit, " @主播 ", "找不到 Twitch 帳號 主播"),
+        (viewers.regular_command, "add @主播", "找不到 Twitch 帳號 主播"),
+    ],
+)
+def test_chat_distinguishes_extra_arguments_from_invalid_login(monkeypatch, command, parameter, reply):
     lookup = Mock()
     monkeypatch.setattr(commands, "may_manage", AsyncMock(return_value=True))
     monkeypatch.setattr(moderation, "_channels", {})
@@ -30,6 +40,6 @@ def test_chat_reports_invalid_login_as_not_found(monkeypatch, command, parameter
 
     asyncio.run(command(cmd))
 
-    assert "找不到" in cmd.reply.await_args.args[0]
+    cmd.reply.assert_awaited_once_with(reply)
     lookup.assert_not_called()
     assert twitch_regulars.valid_login("valid_login123")

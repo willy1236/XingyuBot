@@ -94,7 +94,7 @@ async def regular_command(cmd: ChatCommand) -> None:
 
     if not await may_manage(cmd, "管理常客"):
         return
-    parts = cmd.parameter.split(maxsplit=1)
+    parts = cmd.parameter.split()
     if len(parts) != 2 or parts[0] not in {"add", "remove"} or parts[1] == "@":
         await cmd.reply("用法：!regular add|remove <使用者>")
         return
