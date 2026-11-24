@@ -37,6 +37,8 @@ FILTER_LABELS = {
     "duplicate": "跨訊息重複",
 }
 COUNT_RANGE = (1, 500)
+LIST_MAX_ITEMS = 100
+LIST_MAX_ENTRY_LENGTH = 100
 PERCENT_RANGE = (1, 100)
 DUPLICATE_SECONDS_RANGE = (1, 300)
 DUPLICATE_COUNT_RANGE = (2, 100)
@@ -395,7 +397,13 @@ def _validate_common(values: FilterValues) -> None:
 def _validate_whitelist(raw: object) -> list[str]:
     if not isinstance(raw, list) or not all(isinstance(entry, str) for entry in raw):
         raise InvalidField("params", "白名單必須是網域或路徑的清單")
+    _validate_list_limits(raw, "whitelist", "白名單")
     return list(dict.fromkeys(_normalize_whitelist_entry(entry) for entry in raw))
+
+
+def _validate_list_limits(entries: list[str], field: str, label: str) -> None:
+    if len(entries) > LIST_MAX_ITEMS or any(len(entry.strip()) > LIST_MAX_ENTRY_LENGTH for entry in entries):
+        raise InvalidField(field, f"{label}最多 {LIST_MAX_ITEMS} 項，每項最多 {LIST_MAX_ENTRY_LENGTH} 字")
 
 
 def _validate_range(value: int, bounds: tuple[int, int], field: str, label: str) -> None:
@@ -442,6 +450,7 @@ def validate_filter(kind: str, values: FilterValues) -> FilterValues:
             words = params.get("words")
             if not isinstance(words, list) or not all(isinstance(word, str) for word in words):
                 raise InvalidField("params", "禁字必須是文字清單")
+            _validate_list_limits(words, "words", "禁字清單")
             if any(word.strip() and not word.replace("*", "").strip() for word in words):
                 raise InvalidField("params", "每個禁字至少需要一個非萬用字元")
             validated = {"words": list(dict.fromkeys(word.strip() for word in words if word.strip()))}

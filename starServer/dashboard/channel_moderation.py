@@ -99,7 +99,8 @@ async def update_filter(
     try:
         twitch_moderation.validate_filter(kind, values)
     except InvalidField as exc:
-        raise DashboardError(400, "invalid_field", field=exc.field, reason=str(exc)) from None
+        status = 422 if exc.field in ("whitelist", "words") else 400
+        raise DashboardError(status, "invalid_field", field=exc.field, reason=str(exc)) from None
 
     notice = values["notice"]
     if notice is not None and notice != body.original.notice:
