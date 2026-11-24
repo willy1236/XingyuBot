@@ -13,7 +13,13 @@ from sqlalchemy import text
 from sqlmodel import Session, select
 
 from starlib._twitch_unicode import EMOJI_PRESENTATION_RANGES, LATIN_RANGES, TEXT_EMOJI_RANGES
-from starlib.database import TwitchEnforcementLog, TwitchModerationFilter, TwitchModerationSetting, sqldb
+from starlib.database import (
+    TwitchBotJoinChannel,
+    TwitchEnforcementLog,
+    TwitchModerationFilter,
+    TwitchModerationSetting,
+    sqldb,
+)
 from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import AuditActor, record_change
 from starlib.utils import nowtz
@@ -628,5 +634,11 @@ def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, v
     return result
 
 
-def record_enforcement(entry: TwitchEnforcementLog) -> None:
+def record_enforcement(entry: TwitchEnforcementLog) -> bool:
+    # 刪除所有資料也先鎖頻道列。刪除若先提交，這裡就不再留下原訊息。
+    channel = sqldb.session.get(TwitchBotJoinChannel, entry.twitch_id, with_for_update=True, populate_existing=True)
+    if channel is None or channel.state != "enabled":
+        sqldb.session.rollback()
+        return False
     sqldb.add(entry)
+    return True

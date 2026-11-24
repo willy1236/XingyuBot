@@ -173,9 +173,9 @@ async def on_raid(twitch_id: int) -> None:
     await asyncio.wrap_future(pending)
 
 
-def _write_log(entry: TwitchEnforcementLog) -> None:
+def _write_log(entry: TwitchEnforcementLog) -> bool:
     try:
-        twitch_moderation.record_enforcement(entry)
+        return twitch_moderation.record_enforcement(entry)
     finally:
         sqldb.release_session()
 
@@ -258,7 +258,7 @@ async def check(msg: ChatMessage) -> bool:
         if _channels.get(twitch_id) is not runtime:
             return False
         config = await _config(twitch_id, runtime)
-        if _channels.get(twitch_id) is not runtime or channels.mod_state(twitch_id) is False:
+        if _channels.get(twitch_id) is not runtime or not _enabled(twitch_id) or channels.mod_state(twitch_id) is False:
             return False
         violation = _select_violation(msg, config, runtime, level, user_id, _now())
         if violation is None:
@@ -290,6 +290,8 @@ async def check(msg: ChatMessage) -> bool:
             runtime.strikes[(user_id, kind)] = (strike, _now())
             succeeded = True
 
+        if _channels.get(twitch_id) is not runtime or not _enabled(twitch_id):
+            return succeeded
         user_name = user.display_name or user.name
         entry = TwitchEnforcementLog(
             twitch_id=twitch_id,
@@ -305,10 +307,11 @@ async def check(msg: ChatMessage) -> bool:
             status="ok" if succeeded else "failed",
         )
         try:
-            await asyncio.to_thread(_write_log, entry)
+            if not await asyncio.to_thread(_write_log, entry):
+                return succeeded
         except SQLAlchemyError:
             log.exception("頻道 %s 的 %s 執法紀錄寫入失敗", twitch_id, kind)
-        if succeeded and not rule["silent"] and _channels.get(twitch_id) is runtime:
+        if succeeded and not rule["silent"] and _channels.get(twitch_id) is runtime and _enabled(twitch_id):
             now = _now()
             last_notice = runtime.notices.get(kind)
             if last_notice is None or now - last_notice >= twitch_moderation.NOTICE_SECONDS:
