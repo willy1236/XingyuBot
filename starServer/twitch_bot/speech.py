@@ -174,7 +174,8 @@ async def prepare(template: str, ctx: SpeechContext) -> SpeechContext:
 _check_cache: dict[tuple[int, str], tuple[float, bool]] = {}
 
 
-async def _check(twitch_id: int, text: str) -> Literal["ok", "blocked", "unavailable"]:
+async def check(twitch_id: int, text: str) -> Literal["ok", "blocked", "unavailable"]:
+    """頻道 AutoMod 對一段文字的判定（含快取）；`say` 與直接發言的指令共用。"""
     key = (twitch_id, text)
     cached = _check_cache.get(key)
     if cached is not None and time.monotonic() - cached[0] < CHECK_TTL:
@@ -217,7 +218,7 @@ async def say(
         if not text.strip():
             return False
         if uses_viewer_input(template):
-            result = await _check(twitch_id, text)
+            result = await check(twitch_id, text)
             if result != "ok":
                 reason = "automod" if result == "blocked" else "check_failed"
                 await asyncio.to_thread(_write_block, twitch_id, source_kind, source_key, text, reason)

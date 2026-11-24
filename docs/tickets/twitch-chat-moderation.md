@@ -448,7 +448,7 @@ COMMIT;
 
 **依賴**：C-00（內建指令名稱與既有同名指令改名、`may_manage`、`AuditTarget.stream_info`）
 
-**進度**：進行中。已完成：`STREAM_INFO_SCOPES`／`has_stream_info_scope` 與啟用流程兩處加權限（commit 1）；`test_channel_activation.py` 兩處比對完整 scope 的斷言移到 `test_channel_activation_stream_info.py`（同一行為，不重複）。無需 ALTER。續做：`speech._check` 改公開 `check`（structure commit），再寫 `starServer/twitch_bot/stream_info.py`（`title`／`game`／`uptime`）並在 `twitch_chatbot.py` 註冊、移除 `commands.modify_channel_information` 空殼。
+**進度**：進行中。已完成：`STREAM_INFO_SCOPES`／`has_stream_info_scope` 與啟用流程兩處加權限（`a8684488`）；`test_channel_activation.py` 兩處比對完整 scope 的斷言移到 `test_channel_activation_stream_info.py`（同一行為，不重複）。無需 ALTER。`speech._check` 改公開 `check`（structure commit）。續做：寫 `starServer/twitch_bot/stream_info.py`（`title`／`game`／`uptime`）並在 `twitch_chatbot.py` 註冊、移除 `commands.modify_channel_information` 空殼。
 
 ### C-09 實況主與 mod 能在後台查看與修改實況資訊
 
