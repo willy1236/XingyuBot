@@ -2483,11 +2483,22 @@ class TwitchRepository(BaseRepository):
         return list(self.session.exec(stmt).all())
 
     def delete_twitch_channel_data(self, twitch_id: int) -> None:
-        """刪除頻道在星羽的功能資料：指令、計時訊息、事件回應、擋下紀錄與點數。不 commit。
+        """刪除頻道的指令、計時訊息、事件回應、擋下紀錄、聊天室管理資料與點數。不 commit。
 
-        不碰修改紀錄（`twitch_channel_audit`）、實況主 token 與 `TwitchBotJoinChannel`，那些由 W-09 的端點處理。
+        修改紀錄保留；實況主 token 與頻道狀態交由刪除端點處理。
         """
-        for model in (TwitchChatCommand, TwitchTimer, TwitchEventResponse, TwitchAutomodBlock):
+        # 批次 DELETE 不會觸發 after_flush，需保留交易給呼叫端提交或回滾。
+        self._keep_transaction_open()
+        for model in (
+            TwitchChatCommand,
+            TwitchTimer,
+            TwitchEventResponse,
+            TwitchAutomodBlock,
+            TwitchModerationFilter,
+            TwitchModerationSetting,
+            TwitchRegular,
+            TwitchEnforcementLog,
+        ):
             self.session.exec(delete(model).where(model.twitch_id == twitch_id))
         self.session.exec(delete(TwitchPoint).where(TwitchPoint.broadcaster_id == twitch_id))
 

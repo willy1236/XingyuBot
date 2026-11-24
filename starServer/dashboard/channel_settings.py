@@ -92,6 +92,8 @@ async def delete_channel_data(
     twitch_control.invalidate("twitch_cmd", twitch_id)
     twitch_control.invalidate("twitch_timer", twitch_id)
     twitch_control.invalidate("twitch_event_response", twitch_id)
+    twitch_control.invalidate("twitch_moderation", twitch_id)
+    twitch_control.invalidate("twitch_regular", twitch_id)
     return {"state": DEFAULT_STATE, "bot_offline": bot_offline}
 
 

@@ -59,7 +59,7 @@ flowchart LR
 | 9 | C-08 | 實作完成 | 觀眾與 mod 能在聊天室用 !title、!game、!uptime | C-00 | — | 待 coordinator 審查與 Twitch 實機確認 |
 | 10 | C-09 | 實作完成 | 實況主與 mod 能在後台查看與修改實況資訊 | C-08 | — | |
 | 11 | C-10 | 實作完成 | bot 不是 mod 時，後台列出暫停的聊天室管理功能 | C-06、C-07 | — | 待 coordinator 審查與 Twitch 實機確認 |
-| 12 | C-11 | 未完成 | 刪除所有資料時一併清除聊天室管理資料 | C-01、C-02 | — | |
+| 12 | C-11 | 實作完成 | 刪除所有資料時一併清除聊天室管理資料 | C-01、C-02 | — | 待 coordinator 審查與 Twitch 實機確認 |
 
 沒有並行組：各卡都會改 `CHANNEL_NAV`、`twitch_chatbot.py` 的指令註冊、`docs/messaging-contract.md` 或聊天室管理的同一份設定與頁面。實況資訊（C-08、C-09）與聊天室管理（C-01～C-07）只在這幾個檔案各加一兩行；要並行時，先由 coordinator 決定這幾處的合併方式。
 
@@ -517,7 +517,7 @@ COMMIT;
 
 **依賴**：C-01（`twitch_regular`）、C-02（另外三張表與離開頻道時的清除）
 
-**進度**：未完成
+**進度**：實作完成，隨 `feat(twitch): 刪除頻道資料時清除聊天室管理資料` 提交。四張表在刪除端點的交易內按頻道清除，批次刪除保留到呼叫端提交或回滾。提交後沿用 bot 同步，並失效 `twitch_moderation` 與 `twitch_regular`。後端 37 項 pytest、Python 編譯與 Ruff 通過。無 schema 變更。續做 coordinator 審查，並在 Twitch 實機確認 bot 離房、重新啟用後的快取與暫存執法狀態。
 
 ## 開工前待決
 
