@@ -11,5 +11,5 @@ def test_star_only_blocked_words_are_rejected(word):
 
 
 def test_existing_empty_patterns_do_not_match_every_message():
-    assert not twitch_moderation.detect_blocked_word("Hello", ["*", "**", "bad*word"])
+    assert not twitch_moderation.detect_blocked_word("Hello world", ["*", "**", "* *", "bad*word"])
     assert twitch_moderation.detect_blocked_word("Bad Word", ["*", "**", "bad*word"])

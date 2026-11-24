@@ -239,15 +239,15 @@ def detect_link(text: str, whitelist: Sequence[str]) -> bool:
 
 @lru_cache(maxsize=128)
 def _blocked_patterns(words: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
-    return tuple(tuple(part for part in word.casefold().split("*") if part) for word in words if word)
+    return tuple(
+        tuple(part for part in word.casefold().split("*") if part) for word in words if word.replace("*", "").strip()
+    )
 
 
 def detect_blocked_word(text: str, words: Sequence[str]) -> bool:
     """萬用字元兩側的文字只需依序出現，不限制中間字元。"""
     folded = text.casefold()
     for pattern in _blocked_patterns(tuple(words)):
-        if not pattern:
-            continue
         start = 0
         for part in pattern:
             index = folded.find(part, start)
