@@ -70,9 +70,13 @@ def is_active_punishment(row: TwitchEnforcementLog) -> bool:
     return row.action == "ban" or row.at + timedelta(seconds=row.duration or 0) > nowtz()
 
 
-def _commit_change(twitch_id: int, actor: AuditActor, log_id: int, before: dict | None, after: dict) -> None:
-    record_change(twitch_id, actor, "dashboard", "enforcement", str(log_id), "update", before, after)
+def _commit_change(row: TwitchEnforcementLog, actor: AuditActor, before: dict | None, after: dict) -> None:
+    record_change(row.twitch_id, actor, "dashboard", "enforcement", str(row.user_id), "update", before, after)
     sqldb.commit()
+
+
+def _audit_target(row: TwitchEnforcementLog) -> dict:
+    return {"log_id": row.id, "user_id": row.user_id, "user_login": row.user_login, "user_name": row.user_name}
 
 
 def mark_lifted(twitch_id: int, log_id: int, actor: AuditActor) -> None:
@@ -82,25 +86,17 @@ def mark_lifted(twitch_id: int, log_id: int, actor: AuditActor) -> None:
         if row is None or row.twitch_id != twitch_id:
             return
         row.lifted_at = nowtz()
-        who = {"user_id": row.user_id, "user_login": row.user_login}
-        _commit_change(
-            twitch_id, actor, log_id, {"lifted_at": None, **who}, {"lifted_at": row.lifted_at.isoformat(), **who}
-        )
+        who = _audit_target(row)
+        _commit_change(row, actor, {"lifted_at": None, **who}, {"lifted_at": row.lifted_at.isoformat(), **who})
     except BaseException:
         sqldb.session.rollback()
         raise
 
 
-def record_clear_strikes(twitch_id: int, log_id: int, actor: AuditActor, user_id: int, user_login: str) -> None:
+def record_clear_strikes(row: TwitchEnforcementLog, actor: AuditActor) -> None:
     """記一筆清除犯規次數的 `enforcement` 修改紀錄。"""
     try:
-        _commit_change(
-            twitch_id,
-            actor,
-            log_id,
-            None,
-            {"clear_strikes": True, "user_id": user_id, "user_login": user_login},
-        )
+        _commit_change(row, actor, None, {"clear_strikes": True, **_audit_target(row)})
     except BaseException:
         sqldb.session.rollback()
         raise

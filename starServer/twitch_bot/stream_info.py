@@ -84,7 +84,7 @@ async def game(cmd: ChatCommand) -> None:
     await _record(
         cmd,
         twitch_id,
-        "game",
+        "category",
         {"game": before.game_name, "game_id": before.game_id},
         {"game": chosen.name, "game_id": chosen.id},
     )

@@ -613,7 +613,7 @@ def update_settings(twitch_id: int, actor: AuditActor, values: SettingsValues, v
             actor,
             "dashboard",
             "moderation",
-            "settings",
+            "channel",
             "create" if created else "update",
             dict(before),
             dict(after),

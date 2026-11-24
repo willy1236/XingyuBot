@@ -58,9 +58,7 @@ async def clear_strikes(
 ) -> None:
     row = await _find(twitch_id, log_id)
     await twitch_control.call_channel("moderation.clear_strikes", twitch_id, user_id=row.user_id)
-    await run_db(
-        lambda: twitch_enforcement.record_clear_strikes(twitch_id, log_id, access.actor, row.user_id, row.user_login)
-    )
+    await run_db(lambda: twitch_enforcement.record_clear_strikes(row, access.actor))
 
 
 @router.post("/channels/{twitch_id}/enforcement/{log_id}/regular", status_code=204)
