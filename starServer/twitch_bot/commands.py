@@ -17,7 +17,7 @@ from starlib.messaging import cache_invalidation
 from starlib.twitch_audit import AuditActor
 from starlib.twitch_commands import BUILTIN_COMMANDS, PERMISSIONS, CommandFields, CommandInvalid, CommandMissing
 from starlib.twitch_speech_check import check_template
-from starServer.twitch_bot import speech, state, timers
+from starServer.twitch_bot import moderation, speech, state, timers
 from starServer.twitch_bot.viewers import PERMISSION_LEVELS, viewer_level
 
 log = logging.getLogger(__name__)
@@ -77,6 +77,8 @@ async def _on_invalidated(key: str | None) -> None:
 async def on_message(msg: ChatMessage):
     log.info("in %s, %s said: %s", msg.room.name, msg.user.name, msg.text)
     await timers.on_chat_message(int(msg.room.room_id), msg.user.name.lower() == state.chat.username.lower())
+    if await moderation.check(msg):
+        return
     await respond_to_chat_command(msg)
 
 

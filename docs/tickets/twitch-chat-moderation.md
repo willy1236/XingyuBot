@@ -50,7 +50,7 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | 1 | C-00 | 實作完成 | [共用] 新內建指令、修改紀錄類別與聊天室管理權限 | 無 | — | 其他卡都依賴 |
 | 2 | C-01 | 實作完成 | 實況主與 mod 能維護常客名單，並把自訂指令限制給常客 | C-00 | — | 提供觀眾層級判斷 |
-| 3 | C-02 | 進行中 | 實況主能開啟連結過濾，bot 處罰違規並在聊天室告知 | C-01 | — | 骨架切片 |
+| 3 | C-02 | 實作完成 | 實況主能開啟連結過濾，bot 處罰違規並在聊天室告知 | C-01 | — | 骨架切片 |
 | 4 | C-03 | 未完成 | 實況主能開啟其餘 7 種過濾器 | C-02 | — | |
 | 5 | C-04 | 未完成 | 實況主能自訂處罰階段與犯規次數歸零時間 | C-02 | — | 與 C-03 改同一份設定與頁面 |
 | 6 | C-05 | 未完成 | 被 Raid 後自動暫停洗版類過濾 | C-03、C-04 | — | 暫停的過濾器由 C-03 提供 |
@@ -268,7 +268,7 @@ COMMIT;
 - 處罰後 bot 自己的告知訊息也會進 `on_message`，bot 本身一律豁免。
 - `ban_user` 的 timeout 上限是 1209600 秒。
 
-**進度**：進行中。資料表 `a0b7d905`、設定 API `37176da6`、前端 `4f84d17`。連結白名單依 URL 實際網域判定，告知限制單行，AutoMod 檢查時以過濾器名稱代入 `{filter}`。這些驗證隨 `fix(twitch): 強化連結白名單與執法告知驗證` 提交。三張新表由 SQLModel 建立，無需 ALTER。續做提交 `starServer/twitch_bot/moderation.py`、Helix 執法錯誤處理及連線，驗收基準為 `38b67437`。
+**進度**：實作完成。資料表 `a0b7d905`、設定 API `37176da6`、白名單與告知驗證 `eeeecc6c`、前端 `4f84d17`，Bot 執法、`!permit` 與快取隨 `feat(twitch): 執行聊天室連結過濾與放行` 提交。經 coordinator 確認，Twitch bot 使用專用 client 檢查刪訊息及 timeout／ban 的 HTTP 狀態，補上 twitchAPI 4.5.0 未回報的非 2xx 失敗，保留原 Helix 方法和 token 續期。後端 100 項 pytest、Python 編譯、Ruff、前端 8 項 Vitest 與 TypeScript 通過。三張新表由 SQLModel 建立，無需 ALTER。續做 coordinator 審查和 Twitch 實機確認 Shared Chat、AutoMod、刪除、timeout、告知、放行與跨程序快取失效。
 
 ### C-03 實況主能開啟其餘 7 種過濾器
 

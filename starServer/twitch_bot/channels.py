@@ -18,7 +18,7 @@ from starlib import twitch_tokens
 from starlib.database import APIType, TwitchBotJoinChannel, sqldb
 from starlib.messaging import cache_invalidation, rpc
 from starlib.twitch_tokens import TokenInvalid
-from starServer.twitch_bot import events, state
+from starServer.twitch_bot import events, moderation, state
 
 log = logging.getLogger(__name__)
 
@@ -252,6 +252,8 @@ async def _sync_room(twitch_id: int) -> bool:
     async with _lock(_room_locks, twitch_id):
         row = await reload_channel(twitch_id)
         enabled = row is not None and row.state == "enabled"
+        if not enabled:
+            moderation.forget_channel(twitch_id)
         try:
             joined = await asyncio.wait_for(_join(twitch_id) if enabled else _leave(twitch_id, row), ROOM_TIMEOUT)
         except TimeoutError:
